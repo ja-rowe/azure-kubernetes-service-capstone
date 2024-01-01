@@ -1,0 +1,56 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger: none
+
+pool:
+  name: default
+
+variables:
+  - group: 'aks-terraform'
+  - name: TF_VAR_BKSTRGRG
+    value: 'aks-terraform'
+  - name: TF_VAR_BKSTRG
+    value: 'tfstate1960'
+  - name: TF_VAR_BKCONTAINER
+    value: 'tfstate'
+  - name: TF_VAR_BKSTRGKEY
+    value: 'aks.terraform.tfstate'
+  - name: TF_VAR_CLIENT_ID
+    value: ''
+  - name: TF_VAR_CLIENT_SECRET
+    value: ''
+
+jobs:
+  - job: destroy
+    steps:
+      - script: 'sudo apt install unzip -y'
+        displayName: install unzip
+      - script: |
+          client_id=$(client_id)
+          client_secret=$(client_secret)
+          echo "##vso[task.setvariable variable=TF_VAR_CLIENT_ID]$client_id"
+          echo "##vso[task.setvariable variable=TF_VAR_CLIENT_SECRET]$client_secret"
+        displayName: set TF VARs
+      - task: TerraformInstaller@1
+        displayName: tfinstall
+        inputs:
+          terraformVersion: 'latest'
+      - task: TerraformTaskV4@4
+        displayName: init
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          backendServiceArm: 'tfstateServiceConnection'
+          backendAzureRmResourceGroupName: 'aks-terraform'
+          backendAzureRmStorageAccountName: 'tfstate1960'
+          backendAzureRmContainerName: 'tfstate'
+          backendAzureRmKey: 'aks.terraform.tfstate'
+      - task: TerraformTaskV4@4
+        displayName: destroy
+        inputs:
+          provider: 'azurerm'
+          command: 'destroy'
+          environmentServiceNameAzureRM: 'tfstateServiceConnection'

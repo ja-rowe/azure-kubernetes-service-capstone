@@ -1,0 +1,195 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger: none
+
+pool:
+  name: default
+
+variables:
+  - group: 'aks-terraform'
+  - name: TF_VAR_BKSTRGRG
+    value: 'aks-terraform'
+  - name: TF_VAR_BKSTRG
+    value: 'tfstate1960'
+  - name: TF_VAR_BKCONTAINER
+    value: 'tfstate'
+  - name: TF_VAR_BKSTRGKEY
+    value: 'aks.terraform.tfstate'
+  - name: TF_VAR_CARTS_IMG
+    value: 'weaveworksdemos/carts:0.4.8'
+  - name: TF_VAR_CATALOGUE_IMG
+    value: 'weaveworksdemos/catalogue:0.3.5'
+  - name: TF_VAR_CATALOGUE_DB_IMG
+    value: 'weaveworksdemos/catalogue-db:0.3.0'
+  - name: TF_VAR_ORDERS_IMG
+    value: 'weaveworksdemos/orders:0.4.7'
+  - name: TF_VAR_PAYMENT_IMG
+    value: 'weaveworksdemos/payment:0.4.3'
+  - name: TF_VAR_QUEUE_MASTER_IMG
+    value: 'weaveworksdemos/queue-master:0.3.1'
+  - name: TF_VAR_SHIPPING_IMG
+    value: 'weaveworksdemos/shipping:0.4.8'
+  - name: TF_VAR_USER_IMG
+    value: 'weaveworksdemos/user:0.4.7'
+  - name: TF_VAR_USER_DB_IMG
+    value: 'weaveworksdemos/user-db:0.3.0'
+  - name: TF_VAR_FRONTEND_IMG
+    value: 'weaveworksdemos/front-end:0.3.12'
+  - name: TF_VAR_CLIENT_ID
+    value: ''
+  - name: TF_VAR_CLIENT_SECRET
+    value: ''
+  - name: service_conn
+    value: 'tfstateServiceConnection'
+
+stages:
+  - stage: tfvalidate
+    jobs:
+      - job: validate
+        continueOnError: false
+        steps:
+          - script: 'echo "$(containerRegistry)"'
+          - script: 'sudo apt install unzip -y'
+            displayName: install unzip
+          - script: |
+              curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            displayName: 'Install Azure CLI'
+          - task: AzureCLI@2
+            enabled: true
+            inputs:
+              azureSubscription: $(service_conn)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                declare -A repositories=(
+                  ["carts"]="CARTS_IMG"
+                  ["catalogue"]="CATALOGUE_IMG"
+                  ["catalogue-db"]="CATALOGUE_DB_IMG"
+                  ["orders"]="ORDERS_IMG"
+                  ["payment"]="PAYMENT_IMG"
+                  ["queuemaster"]="QUEUE_MASTER_IMG"
+                  ["shipping"]="SHIPPING_IMG"
+                  ["user"]="USER_IMG"
+                  ["user-db"]="USER_DB_IMG"
+                  ["frontend"]="FRONTEND_IMG"
+                )
+                
+                for repo in "${!repositories[@]}"; do
+                  # Attempt to fetch the latest tag and suppress any error output
+                  latest_tag=$(az acr repository show-tags -n sockshop1 --repository $repo --orderby time_desc --output tsv 2>/dev/null | head -n 1)
+                  # echo "Latest tag for $repo: $latest_tag"
+                  # Check if the latest_tag is empty
+                  if [ -z "$latest_tag" ]; then
+                    echo "No tag found for repository $repo or repository does not exist."
+                    continue
+                  fi
+                
+                  # If successful and tag is found, set the variable
+                  img_name="$(containerRegistry)/$repo:$latest_tag"
+                  # export TF_VAR_${repositories[$repo]}=$img_name
+                  echo "##vso[task.setvariable variable=TF_VAR_${repositories[$repo]}]$img_name"
+                  echo "image name is: $img_name"
+                done
+                log_var=DEBUG
+                echo "##vso[task.setvariable variable=TF_LOG]$log_var"
+          - task: TerraformInstaller@1
+            displayName: tfinstall
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTaskV4@4
+            displayName: init
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              backendServiceArm: $(service_conn)
+              backendAzureRmResourceGroupName: 'aks-terraform'
+              backendAzureRmStorageAccountName: 'tfstate1960'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'aks.terraform.tfstate'
+          - task: TerraformTaskV4@4
+            displayName: validate
+            inputs:
+              provider: 'azurerm'
+              command: 'validate'
+  - stage: deploy
+    condition: succeeded('tfvalidate')
+    dependsOn: tfvalidate
+    jobs:
+      - job: apply
+        steps:
+        - script: 'sudo apt install unzip -y'
+          displayName: install unzip
+        - script: |
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          displayName: 'Install Azure CLI'
+        - task: AzureCLI@2
+          enabled: true
+          inputs:
+            azureSubscription: $(service_conn)
+            scriptType: 'bash'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              declare -A repositories=(
+                ["carts"]="CARTS_IMG"
+                ["catalogue"]="CATALOGUE_IMG"
+                ["catalogue-db"]="CATALOGUE_DB_IMG"
+                ["orders"]="ORDERS_IMG"
+                ["payment"]="PAYMENT_IMG"
+                ["queuemaster"]="QUEUE_MASTER_IMG"
+                ["shipping"]="SHIPPING_IMG"
+                ["user"]="USER_IMG"
+                ["user-db"]="USER_DB_IMG"
+                ["frontend"]="FRONTEND_IMG"
+              )
+              
+              for repo in "${!repositories[@]}"; do
+                # Attempt to fetch the latest tag and suppress any error output
+                latest_tag=$(az acr repository show-tags -n sockshop1 --repository $repo --orderby time_desc --output tsv 2>/dev/null | head -n 1)
+                # echo "Latest tag for $repo: $latest_tag"
+                # Check if the latest_tag is empty
+                if [ -z "$latest_tag" ]; then
+                  echo "No tag found for repository $repo or repository does not exist."
+                  continue
+                fi
+              
+                # If successful and tag is found, set the variable
+                img_name="$(containerRegistry)/$repo:$latest_tag"
+                # export TF_VAR_${repositories[$repo]}=$img_name
+                echo "##vso[task.setvariable variable=TF_VAR_${repositories[$repo]}]$img_name"
+                echo "image name is: $img_name"
+              done
+              client_id=$(client_id)
+              client_secret=$(client_secret)
+              echo "##vso[task.setvariable variable=TF_VAR_CLIENT_ID]$client_id"
+              echo "##vso[task.setvariable variable=TF_VAR_CLIENT_SECRET]$client_secret"
+              log_var=DEBUG
+              echo "##vso[task.setvariable variable=TF_LOG]$log_var"
+        - task: TerraformInstaller@1
+          displayName: tfinstall
+          inputs:
+            terraformVersion: 'latest'
+        - task: TerraformTaskV4@4
+          displayName: init
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            backendServiceArm: $(service_conn)
+            backendAzureRmResourceGroupName: 'aks-terraform'
+            backendAzureRmStorageAccountName: 'tfstate1960'
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'aks.terraform.tfstate'
+        - task: TerraformTaskV4@4
+          displayName: plan
+          inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            environmentServiceNameAzureRM: $(service_conn)
+        - task: TerraformTaskV4@4
+          displayName: apply
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            environmentServiceNameAzureRM: $(service_conn)
