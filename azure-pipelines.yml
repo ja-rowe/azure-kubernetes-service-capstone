@@ -401,7 +401,7 @@ stages:
 
   # --- DESTROY: comment out this whole stage to keep the infra after deploy ---
   - stage: destroy
-    dependsOn: deploy
+    # dependsOn: deploy
     jobs:
       - job: destroy
         steps:
