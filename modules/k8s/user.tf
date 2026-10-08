@@ -41,7 +41,7 @@ resource "kubernetes_deployment" "user" {
           }
 
           port {
-            container_port = 8084
+            container_port = 80
           }
 
           env {
@@ -64,7 +64,7 @@ resource "kubernetes_deployment" "user" {
           liveness_probe {
             http_get {
               path = "/health"
-              port = 8084
+              port = 80
             }
 
             initial_delay_seconds = 300
@@ -74,7 +74,7 @@ resource "kubernetes_deployment" "user" {
           readiness_probe {
             http_get {
               path = "/health"
-              port = 8084
+              port = 80
             }
 
             initial_delay_seconds = 180
@@ -104,8 +104,8 @@ resource "kubernetes_service" "user" {
 
   spec {
     port {
-      port        = 8084
-      target_port = 8084
+      port        = 80
+      target_port = 80
     }
 
     selector = {

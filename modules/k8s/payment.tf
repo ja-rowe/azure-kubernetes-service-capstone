@@ -41,7 +41,7 @@ resource "kubernetes_deployment" "payment" {
           }
 
           port {
-            container_port = 8080
+            container_port = 80
           }
 
           security_context {
@@ -59,7 +59,7 @@ resource "kubernetes_deployment" "payment" {
           liveness_probe {
             http_get {
               path = "/health"
-              port = 8080
+              port = 80
             }
 
             initial_delay_seconds = 300
@@ -69,7 +69,7 @@ resource "kubernetes_deployment" "payment" {
           readiness_probe {
             http_get {
               path = "/health"
-              port = 8080
+              port = 80
             }
 
             initial_delay_seconds = 180
@@ -99,8 +99,8 @@ resource "kubernetes_service" "payment" {
 
   spec {
     port {
-      port        = 8080
-      target_port = 8080
+      port        = 80
+      target_port = 80
     }
 
     selector = {

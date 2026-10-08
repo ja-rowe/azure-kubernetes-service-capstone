@@ -46,7 +46,7 @@ resource "kubernetes_deployment" "queue_master" {
           }
 
           port {
-            container_port = 8080
+            container_port = 80
           }
         }
 
@@ -72,8 +72,8 @@ resource "kubernetes_service" "queue_master" {
 
   spec {
     port {
-      port        = 8080
-      target_port = 8080
+      port        = 80
+      target_port = 80
     }
 
     selector = {

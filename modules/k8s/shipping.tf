@@ -51,7 +51,7 @@ resource "kubernetes_deployment" "shipping" {
           }
 
           port {
-            container_port = 8080
+            container_port = 80
           }
 
           security_context {
@@ -102,8 +102,8 @@ resource "kubernetes_service" "shipping" {
 
   spec {
     port {
-      port        = 8080
-      target_port = 8080
+      port        = 80
+      target_port = 80
     }
 
     selector = {
