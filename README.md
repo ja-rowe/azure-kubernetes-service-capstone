@@ -6,54 +6,43 @@ Required CLI tools:
 - [Azure DevOps Service](https://azure.microsoft.com/en-us/products/devops)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 
-1. ### Create Storage Account
+1. ### Upload the `.env` secure file
 
-This is where we will store the terraform state.
-
-```
-#!/bin/bash
-
-RESOURCE_GROUP_NAME="aks-terraform"
-STORAGE_ACCOUNT_NAME=tfstate$RANDOM
-CONTAINER_NAME=tfstate
-
-# Create resource group
-az group create --name $RESOURCE_GROUP_NAME --location eastus
-
-# Create storage account
-az storage account create --resource-group $RESOURCE_GROUP_NAME --name $STORAGE_ACCOUNT_NAME --sku Standard_LRS --encryption-services blob
-
-# Create blob container
-az storage container create --name $CONTAINER_NAME --account-name $STORAGE_ACCOUNT_NAME
-
-az storage account keys list --resource-group $RESOURCE_GROUP_NAME --account-name $STORAGE_ACCOUNT_NAME --query '[0].value' -o tsv
-```
-2. ### Create Azure Container Registry
+Upload a secure file named `.env` (Pipelines > Library > Secure files) and authorize the pipelines to use it. It must define the service principal used for all Azure access:
 
 ```
-#!/bin/bash
-
-RESOURCE_GROUP_NAME="aks-terraform"
-CONTAINER_REGISTRY_NAME="sockshop1"
-
-az acr create --resource-group $RESOURCE_GROUP_NAME \
-  --name $CONTAINER_REGISTRY_NAME --sku Standard
+ARM_CLIENT_ID=
+ARM_CLIENT_SECRET=
+ARM_TENANT_ID=
+ARM_SUBSCRIPTION_ID=
 ```
 
-3. ### Create Service Connections
+The service principal needs `Contributor` and permission to create role assignments (`User Access Administrator` or `Owner`) on the subscription.
 
-Create connections for the following:
-- ACR
-- Azure Storage
-
-4. ### Create the following variables in the Library
--  dockerRegistryServiceConnection
-    - the value should be the name of the service connection
+2. ### Create the following variables in the Library
+Create a variable group named `aks-terraform` containing:
 - containerRegistry
-    - the value should be the name of the container registry
-5. ### Import repos & Create pipelines
+    - the login server of the container registry, e.g. `sockshop1.azurecr.io`
 
-These are the repos containing the microservices that form the Sock Shop web app along with the Azure Pipeline YAMLS files.
+3. ### Create the pipeline
+
+Create a pipeline from `azure-pipelines.yml` in the `azure-kubernetes-service-deploy` repo. On a new Azure DevOps organization, make sure a Microsoft-hosted parallel job has been granted.
+
+4. ### Run the pipeline
+
+Run `azure-pipelines.yml`. It has four stages:
+- `bootstrap`: provisions the Terraform remote state resource group, storage account and container, the `aks-terraform` resource group, the `sockshop1` Azure Container Registry, and the `AcrPull` role assignment for the service principal. It is idempotent, so re-running is safe.
+- `tfvalidate`: runs `terraform init` and `terraform validate`.
+- `deploy`: plans and applies the cluster and Sock Shop.
+- `destroy`: runs `terraform destroy`. Comment out this whole stage in the YAML to keep the infra up after a run.
+- At the end of `deploy`, the `Get Sock Shop external IP` step prints the public URL of the shop. The shop is only reachable while the infra exists, so comment out the `destroy` stage to browse it.
+
+By default the pipeline deploys the public `weaveworksdemos` images. To deploy your own images instead, see the optional steps below.
+
+## Optional: build your own images into ACR
+
+1. Create a service connection to the ACR and add a `dockerRegistryServiceConnection` variable (the connection's name) to the `aks-terraform` variable group.
+2. Import the repos containing the microservices that form the Sock Shop web app along with their Azure Pipeline YAML files, and create a pipeline for each:
 - https://github.com/ja-rowe/user
 - https://github.com/ja-rowe/shipping
 - https://github.com/ja-rowe/queue-master
@@ -64,15 +53,4 @@ These are the repos containing the microservices that form the Sock Shop web app
 - https://github.com/ja-rowe/carts
 - https://github.com/ja-rowe/azure-kubernetes-service-deploy
 
-6. ### Assign AcrPull permission
-```
-az login
-
-az account list -o table
-
-SUBSCRIPTION=your-subscription-id-here
-
-SERVICE_PRINCIPAL_JSON=$(az ad sp create-for-rbac --skip-assignment --name <Name-Of-SP> -o json)
-
-az role assignment create --assignee <ACR-Resource-ID> --scope "/subscriptions/$SUBSCRIPTION/resourceGroups/<RG-Name>/providers/Microsoft.ContainerRegistry/registries/<Name-Of-Registry>" --role AcrPull
-```
+When the registry has image tags, `azure-pipelines.yml` picks up the latest tag of each repository automatically.

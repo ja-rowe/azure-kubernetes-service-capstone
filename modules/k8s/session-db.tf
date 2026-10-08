@@ -47,7 +47,7 @@ resource "kubernetes_deployment" "session_db" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

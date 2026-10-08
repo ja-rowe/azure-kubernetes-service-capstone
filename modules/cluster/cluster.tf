@@ -6,8 +6,12 @@ resource "azurerm_kubernetes_cluster" "aks-terraform" {
 
   default_node_pool {
     name = "default"
-    node_count = 2
-    vm_size = "Standard_E4_v4"
+    node_count = 4
+    vm_size = "Standard_B2s"
+  }
+  node_provisioning_profile {
+    mode = "Manual"
+    default_node_pools = "None"
   }
   service_principal {
     client_id = var.client_id

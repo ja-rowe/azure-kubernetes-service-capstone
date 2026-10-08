@@ -2,22 +2,6 @@ variable "location" {
     default = "eastus"
 }
 
-variable "BKSTRGRG" {
-  
-}
-
-variable "BKSTRG" {
-  
-}
-
-variable "BKCONTAINER" {
-  
-}
-
-variable "BKSTRGKEY" {
-  
-}
-
 variable "CARTS_IMG" {
     default = "weaveworksdemos/carts:0.4.8"
 }

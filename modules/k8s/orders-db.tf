@@ -57,7 +57,7 @@ resource "kubernetes_deployment" "orders_db" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

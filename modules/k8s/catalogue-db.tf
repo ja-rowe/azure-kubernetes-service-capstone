@@ -45,7 +45,7 @@ resource "kubernetes_deployment" "catalogue_db" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

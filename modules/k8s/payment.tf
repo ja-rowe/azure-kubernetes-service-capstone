@@ -78,7 +78,7 @@ resource "kubernetes_deployment" "payment" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

@@ -81,7 +81,7 @@ resource "kubernetes_deployment" "shipping" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

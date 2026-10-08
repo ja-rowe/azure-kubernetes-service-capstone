@@ -83,7 +83,7 @@ resource "kubernetes_deployment" "user" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

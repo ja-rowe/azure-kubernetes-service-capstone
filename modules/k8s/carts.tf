@@ -76,7 +76,7 @@ resource "kubernetes_deployment" "carts" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }

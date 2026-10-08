@@ -51,7 +51,7 @@ resource "kubernetes_deployment" "queue_master" {
         }
 
         node_selector = {
-          "beta.kubernetes.io/os" = "linux"
+          "kubernetes.io/os" = "linux"
         }
       }
     }
