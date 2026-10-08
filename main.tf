@@ -20,13 +20,6 @@ provider "azurerm" {
   }
 }
 
-data "azurerm_kubernetes_cluster" "default" {
-  depends_on          = [module.cluster] # refresh cluster state before reading
-  name                = "aks-terraform"
-  resource_group_name = "aks-terraform"
-}
-
-
 module "cluster" {
     source = "./modules/cluster"
     client_id = var.CLIENT_ID
@@ -35,10 +28,10 @@ module "cluster" {
 
 module "k8s" {
   source = "./modules/k8s"
-  host = data.azurerm_kubernetes_cluster.default.kube_config.0.host
-  client_certificate = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_certificate)
-  client_key = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.default.kube_config.0.cluster_ca_certificate)
+  host = module.cluster.host
+  client_certificate = base64decode(module.cluster.client_certificate)
+  client_key = base64decode(module.cluster.client_key)
+  cluster_ca_certificate = base64decode(module.cluster.cluster_ca_certificate)
   CARTS_IMG = var.CARTS_IMG
   CATALOGUE_DB_IMG = var.CATALOGUE_DB_IMG
   CATALOGUE_IMG = var.CATALOGUE_IMG
