@@ -26,7 +26,7 @@ resource "kubernetes_deployment" "orders_db" {
       spec {
         container {
           name  = "orders-db"
-          image = "mongo"
+          image = "mongo:3.4"
 
           port {
             name           = "mongo"
