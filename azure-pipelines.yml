@@ -164,6 +164,7 @@ stages:
               echo "AcrPull already assigned."
             fi
           displayName: 'Assign AcrPull to the service principal'
+          enabled: false
 
   - stage: tfvalidate
     dependsOn: bootstrap
