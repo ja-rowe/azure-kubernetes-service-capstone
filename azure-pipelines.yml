@@ -3,6 +3,8 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+trigger: main
+
 pool:
   vmImage: ubuntu-latest
 
@@ -127,7 +129,7 @@ stages:
 
             az group create \
               --name "$RESOURCE_GROUP_NAME" \
-              --location eastus \
+              --location centralus \
               --output none
 
             az acr create \

@@ -1,5 +1,5 @@
 variable "location" {
-    default = "eastus"
+    default = "centralus"
 }
 
 variable "CARTS_IMG" {

@@ -1,6 +1,6 @@
 resource "azurerm_kubernetes_cluster" "aks-terraform" {
   name = "aks-terraform"
-  location = "eastus"
+  location = "centralus"
   resource_group_name = "aks-terraform"
   dns_prefix = "aks-terraform"
 
@@ -28,13 +28,13 @@ resource "azurerm_kubernetes_cluster" "aks-terraform" {
 
 resource "azurerm_log_analytics_workspace" "logws" {
   resource_group_name = "aks-terraform"
-  location = "eastus"
+  location = "centralus"
   name = "aks-terraform-log-w"
 }
 
 resource "azurerm_log_analytics_solution" "logsoln" {
   solution_name         = "ContainerInsights"
-  location              = "eastus"
+  location              = "centralus"
   resource_group_name   = "aks-terraform"
   workspace_resource_id = azurerm_log_analytics_workspace.logws.id
   workspace_name        = azurerm_log_analytics_workspace.logws.name
