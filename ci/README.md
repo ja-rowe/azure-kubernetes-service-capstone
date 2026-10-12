@@ -32,7 +32,7 @@ Services: `carts`, `orders`, `shipping`, `queue-master`, `user`, `payment`, `cat
 |---|---|
 | carts, orders, shipping, queue-master | `mvn -B test` on `maven:3.6-jdk-8` with MongoDB on localhost |
 | user | `glide install && go test -vet=off $(glide novendor)` on Go 1.11 + `mongod` (the `db/mongodb` tests start a local `mongod`) |
-| payment, catalogue | `gvt restore && go test -vet=off` on `golang:1.11` |
+| payment, catalogue | `gvt restore` (retried up to 3 times, the dependency clones are flaky) then `go test -vet=off` on `golang:1.11` |
 | front-end | `npm install && npm test` on `node:10` |
 
 `-vet=off` because `go test` runs `go vet` since Go 1.10 and the old tests contain printf-style
