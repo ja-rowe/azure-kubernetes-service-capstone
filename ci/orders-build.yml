@@ -1,0 +1,36 @@
+# Builds and pushes the orders image(s) to ACR after orders-test succeeds, for exactly the tested commit.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: aks-terraform   # provides dockerRegistryServiceConnection
+
+resources:
+  pipelines:
+    - pipeline: tests
+      source: orders-test     # name of the test pipeline in Azure DevOps
+      trigger:
+        stages:
+          - Test
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: orders
+      ref: main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: image
+        steps:
+          - template: templates/build-image.yml
+            parameters:
+              maven: true
+              jarDirectory: docker/orders
+              images:
+                - repository: orders
+                  dockerfile: docker/orders/Dockerfile
+                  context: docker/orders

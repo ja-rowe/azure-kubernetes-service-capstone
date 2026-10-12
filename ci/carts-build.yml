@@ -1,0 +1,36 @@
+# Builds and pushes the carts image(s) to ACR after carts-test succeeds, for exactly the tested commit.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: aks-terraform   # provides dockerRegistryServiceConnection
+
+resources:
+  pipelines:
+    - pipeline: tests
+      source: carts-test     # name of the test pipeline in Azure DevOps
+      trigger:
+        stages:
+          - Test
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: carts
+      ref: main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: image
+        steps:
+          - template: templates/build-image.yml
+            parameters:
+              maven: true
+              jarDirectory: docker/carts
+              images:
+                - repository: carts
+                  dockerfile: docker/carts/Dockerfile
+                  context: docker/carts

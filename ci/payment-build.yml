@@ -1,0 +1,34 @@
+# Builds and pushes the payment image(s) to ACR after payment-test succeeds, for exactly the tested commit.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: aks-terraform   # provides dockerRegistryServiceConnection
+
+resources:
+  pipelines:
+    - pipeline: tests
+      source: payment-test     # name of the test pipeline in Azure DevOps
+      trigger:
+        stages:
+          - Test
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: payment
+      ref: main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: image
+        steps:
+          - template: templates/build-image.yml
+            parameters:
+              images:
+                - repository: payment
+                  dockerfile: docker/payment/Dockerfile
+                  context: .

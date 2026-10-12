@@ -1,0 +1,25 @@
+# Unit tests for orders. Runs on every push to main of the orders repository.
+# On success, ci/orders-build.yml is triggered.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: orders
+      ref: main
+      trigger:
+        branches:
+          include:
+            - main
+
+stages:
+  - stage: Test
+    jobs:
+      - job: unit
+        steps:
+          - template: templates/test-java.yml

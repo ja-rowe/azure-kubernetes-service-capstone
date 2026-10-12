@@ -1,0 +1,50 @@
+# Builds the tested commit of a service and pushes its image(s) to ACR.
+# Expects the repository resource alias `svc` and the pipeline resource alias `tests`.
+parameters:
+  - name: maven          # build the jar first and copy it next to the Dockerfile
+    type: boolean
+    default: false
+  - name: jarDirectory   # where the Dockerfile expects the jar (relative to the repo root)
+    type: string
+    default: ''
+  - name: images         # list of { repository, dockerfile, context } (paths relative to the repo root)
+    type: object
+
+steps:
+  - download: tests
+    artifact: commit
+    displayName: Download tested commit
+
+  - checkout: svc
+    path: svc
+    fetchDepth: 0
+
+  - script: |
+      sha="$(cat "$(Pipeline.Workspace)/tests/commit/sha.txt")"
+      echo "Building tested commit $sha"
+      git checkout --detach "$sha"
+    workingDirectory: $(Pipeline.Workspace)/svc
+    displayName: Check out the tested commit
+
+  - ${{ if eq(parameters.maven, true) }}:
+      - script: |
+          docker run --rm \
+            -v "$HOME/.m2:/root/.m2" \
+            -v "$(Pipeline.Workspace)/svc:/src" \
+            -w /src \
+            maven:3.6-jdk-8 mvn -B -q -DskipTests package
+          cp "$(Pipeline.Workspace)/svc"/target/*.jar "$(Pipeline.Workspace)/svc/${{ parameters.jarDirectory }}/"
+        displayName: Build jar (Maven, JDK 8)
+
+  - ${{ each image in parameters.images }}:
+      - task: Docker@2
+        displayName: Build and push ${{ image.repository }}
+        inputs:
+          command: buildAndPush
+          containerRegistry: $(dockerRegistryServiceConnection)
+          repository: ${{ image.repository }}
+          Dockerfile: $(Pipeline.Workspace)/svc/${{ image.dockerfile }}
+          buildContext: $(Pipeline.Workspace)/svc/${{ image.context }}
+          tags: |
+            $(Build.BuildId)
+            latest

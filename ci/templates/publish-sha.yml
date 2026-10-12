@@ -1,0 +1,11 @@
+# Publishes the commit that was tested, so the build pipeline builds exactly that commit.
+steps:
+  - script: |
+      mkdir -p "$(Build.ArtifactStagingDirectory)/commit"
+      git -C "$(Pipeline.Workspace)/svc" rev-parse HEAD > "$(Build.ArtifactStagingDirectory)/commit/sha.txt"
+      echo "Tested commit: $(cat "$(Build.ArtifactStagingDirectory)/commit/sha.txt")"
+    displayName: Record tested commit
+
+  - publish: $(Build.ArtifactStagingDirectory)/commit
+    artifact: commit
+    displayName: Publish tested commit

@@ -1,0 +1,25 @@
+# Unit tests for carts. Runs on every push to main of the carts repository.
+# On success, ci/carts-build.yml is triggered.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: carts
+      ref: main
+      trigger:
+        branches:
+          include:
+            - main
+
+stages:
+  - stage: Test
+    jobs:
+      - job: unit
+        steps:
+          - template: templates/test-java.yml

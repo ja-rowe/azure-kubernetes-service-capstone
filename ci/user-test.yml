@@ -1,0 +1,40 @@
+# Unit tests for user. Runs on every push to main of the user repository.
+# On success, ci/user-build.yml is triggered.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: user
+      ref: main
+      trigger:
+        branches:
+          include:
+            - main
+
+stages:
+  - stage: Test
+    jobs:
+      - job: unit
+        steps:
+          - template: templates/test-go.yml
+            parameters:
+              service: user
+              image: user-test       # golang 1.11 + mongod, because db/mongodb tests start a local mongod
+              imageSetup: |
+                mkdir -p "$(Agent.TempDirectory)/user-test"
+                cat > "$(Agent.TempDirectory)/user-test/Dockerfile" <<'DOCKERFILE'
+                FROM golang:1.11 AS go
+                FROM mongo:3.4
+                RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates && rm -rf /var/lib/apt/lists/*
+                COPY --from=go /usr/local/go /usr/local/go
+                ENV GOPATH=/go PATH=/go/bin:/usr/local/go/bin:$PATH GO111MODULE=off
+                RUN go get github.com/Masterminds/glide
+                DOCKERFILE
+                docker build -t user-test "$(Agent.TempDirectory)/user-test"
+              command: glide install >/dev/null && go test -vet=off -v $(glide novendor)

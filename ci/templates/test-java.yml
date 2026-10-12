@@ -1,0 +1,19 @@
+# Unit tests for a Maven (JDK 8) service. Expects the repository resource alias `svc`.
+steps:
+  - checkout: svc
+    path: svc
+    fetchDepth: 1
+
+  # Some suites expect a MongoDB on localhost.
+  - script: docker run -d --name mongo --network host mongo:3.4
+    displayName: Start MongoDB
+
+  - script: |
+      docker run --rm --network host \
+        -v "$HOME/.m2:/root/.m2" \
+        -v "$(Pipeline.Workspace)/svc:/src" \
+        -w /src \
+        maven:3.6-jdk-8 mvn -B test
+    displayName: Unit tests (Maven, JDK 8)
+
+  - template: publish-sha.yml

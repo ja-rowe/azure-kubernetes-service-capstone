@@ -1,0 +1,14 @@
+# Unit tests for the Node (mocha) service. Expects the repository resource alias `svc`.
+steps:
+  - checkout: svc
+    path: svc
+    fetchDepth: 1
+
+  - script: |
+      docker run --rm \
+        -v "$(Pipeline.Workspace)/svc:/src" \
+        -w /src \
+        node:10 sh -c 'npm install --no-audit --no-fund && npm test'
+    displayName: Unit tests (npm, Node 10)
+
+  - template: publish-sha.yml

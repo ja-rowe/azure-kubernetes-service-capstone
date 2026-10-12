@@ -41,16 +41,10 @@ By default the pipeline deploys the public `weaveworksdemos` images. To deploy y
 
 ## Optional: build your own images into ACR
 
-1. Create a service connection to the ACR and add a `dockerRegistryServiceConnection` variable (the connection's name) to the `aks-terraform` variable group.
-2. Import the repos containing the microservices that form the Sock Shop web app along with their Azure Pipeline YAML files, and create a pipeline for each:
-- https://github.com/ja-rowe/user
-- https://github.com/ja-rowe/shipping
-- https://github.com/ja-rowe/queue-master
-- https://github.com/ja-rowe/payment
-- https://github.com/ja-rowe/orders
-- https://github.com/ja-rowe/front-end
-- https://github.com/ja-rowe/catalogue
-- https://github.com/ja-rowe/carts
-- https://github.com/ja-rowe/azure-kubernetes-service-deploy
+Each microservice has a test pipeline (runs on merge to `main`) and a build pipeline (triggered
+when the tests pass) that pushes the image to ACR. Their definitions live in [`ci/`](ci/README.md),
+together with the one-time setup (importing the service repos into Azure Repos, the ACR service
+connection and creating the pipelines).
 
-When the registry has image tags, `azure-pipelines.yml` picks up the latest tag of each repository automatically.
+When the registry has image tags, `azure-pipelines.yml` picks up the latest tag of each repository
+automatically.

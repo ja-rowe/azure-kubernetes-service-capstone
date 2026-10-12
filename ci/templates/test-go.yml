@@ -1,0 +1,35 @@
+# Unit tests for a Go service (GOPATH layout, Go 1.11). Expects the repository resource alias `svc`.
+#
+# -vet=off: the tests predate `go vet` running as part of `go test` (Go >= 1.10) and contain
+# printf-style mistakes that vet now reports as build failures.
+parameters:
+  - name: service        # directory name under github.com/microservices-demo/
+    type: string
+  - name: image          # container the tests run in
+    type: string
+    default: golang:1.11
+  - name: imageSetup     # optional shell run before the tests to build `image`
+    type: string
+    default: ''
+  - name: command        # shell run inside the container from the service's GOPATH dir
+    type: string
+
+steps:
+  - checkout: svc
+    path: svc
+    fetchDepth: 1
+
+  - ${{ if ne(parameters.imageSetup, '') }}:
+      - script: ${{ parameters.imageSetup }}
+        displayName: Build test image
+
+  - script: |
+      docker run --rm \
+        -e GO111MODULE=off \
+        -v "$(Pipeline.Workspace)/svc:/go/src/github.com/microservices-demo/${{ parameters.service }}" \
+        -w /go/src/github.com/microservices-demo/${{ parameters.service }} \
+        ${{ parameters.image }} \
+        sh -c '${{ parameters.command }}'
+    displayName: Unit tests (Go)
+
+  - template: publish-sha.yml

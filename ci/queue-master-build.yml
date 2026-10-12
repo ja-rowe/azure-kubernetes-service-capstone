@@ -1,0 +1,36 @@
+# Builds and pushes the queue-master image(s) to ACR after queue-master-test succeeds, for exactly the tested commit.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: aks-terraform   # provides dockerRegistryServiceConnection
+
+resources:
+  pipelines:
+    - pipeline: tests
+      source: queue-master-test     # name of the test pipeline in Azure DevOps
+      trigger:
+        stages:
+          - Test
+  repositories:
+    - repository: svc
+      type: git          # Azure Repos Git; the repository is in the same project as this pipeline
+      name: queue-master
+      ref: main
+
+stages:
+  - stage: Build
+    jobs:
+      - job: image
+        steps:
+          - template: templates/build-image.yml
+            parameters:
+              maven: true
+              jarDirectory: docker/queue-master
+              images:
+                - repository: queuemaster
+                  dockerfile: docker/queue-master/Dockerfile
+                  context: docker/queue-master
