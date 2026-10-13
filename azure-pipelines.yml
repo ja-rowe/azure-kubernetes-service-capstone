@@ -1,48 +1,45 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Infrastructure pipeline: prerequisites (state storage, resource group, container registry) and
+# the AKS cluster. The Sock Shop itself is deployed per environment by ci/release-dev.yml and
+# ci/promote.yml (see ci/README.md).
+#
+# action=destroy removes the cluster only. Destroy the environments first (terraform destroy in
+# envs/ with each environment's state key), otherwise their state would be left dangling.
 
+# Runs on infrastructure changes pushed to main.
 trigger:
-- main
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - azure-pipelines.yml
+      - main.tf
+      - variables.tf
+      - modules/cluster/*
+
+pr: none
+
+parameters:
+  - name: action
+    displayName: What to do with the cluster
+    type: string
+    default: apply
+    values:
+      - apply
+      - destroy
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-24.04
 
 variables:
-  - group: 'aks-terraform'
   - name: stateRg
-    value: 't3-capstone-tfstate-rg'
+    value: t3-capstone-tfstate-rg
   - name: stateAccount
-    value: 't3capstonetfstate'
+    value: t3capstonetfstate
   - name: stateContainer
-    value: 'tfstate'
+    value: tfstate
   - name: stateKey
-    value: 'aks.terraform.tfstate'
-  - name: TF_VAR_CARTS_IMG
-    value: 'weaveworksdemos/carts:0.4.8'
-  - name: TF_VAR_CATALOGUE_IMG
-    value: 'weaveworksdemos/catalogue:0.3.5'
-  - name: TF_VAR_CATALOGUE_DB_IMG
-    value: 'weaveworksdemos/catalogue-db:0.3.0'
-  - name: TF_VAR_ORDERS_IMG
-    value: 'weaveworksdemos/orders:0.4.7'
-  - name: TF_VAR_PAYMENT_IMG
-    value: 'weaveworksdemos/payment:0.4.3'
-  - name: TF_VAR_QUEUE_MASTER_IMG
-    value: 'weaveworksdemos/queue-master:0.3.1'
-  - name: TF_VAR_SHIPPING_IMG
-    value: 'weaveworksdemos/shipping:0.4.8'
-  - name: TF_VAR_USER_IMG
-    value: 'weaveworksdemos/user:0.4.7'
-  - name: TF_VAR_USER_DB_IMG
-    value: 'weaveworksdemos/user-db:0.3.0'
-  - name: TF_VAR_FRONTEND_IMG
-    value: 'weaveworksdemos/front-end:0.3.12'
-  - name: TF_VAR_CLIENT_ID
-    value: ''
-  - name: TF_VAR_CLIENT_SECRET
-    value: ''
+    value: aks.terraform.tfstate
 
 stages:
   - stage: bootstrap
@@ -165,308 +162,65 @@ stages:
               echo "AcrPull already assigned."
             fi
           displayName: 'Assign AcrPull to the service principal'
+          # Disabled: the pipeline's service principal is not allowed to create role assignments.
+          # Grant AcrPull to the cluster's service principal once with an account that can (see README).
           enabled: false
 
-  - stage: tfvalidate
+  - stage: cluster
+    displayName: Cluster (${{ parameters.action }})
     dependsOn: bootstrap
     jobs:
-      - job: validate
-        continueOnError: false
+      - job: terraform
         steps:
-          - task: DownloadSecureFile@1
-            name: envFile
-            displayName: 'Download .env secure file'
+          - checkout: self
+          - template: ci/templates/azure-login.yml
+
+          - task: TerraformInstaller@1
+            displayName: Install Terraform
             inputs:
-              secureFile: '.env'
+              terraformVersion: latest
 
           - script: |
-              set -a
-              source "$(envFile.secureFilePath)"
-              set +a
+              terraform init -input=false \
+                -backend-config="resource_group_name=$(stateRg)" \
+                -backend-config="storage_account_name=$(stateAccount)" \
+                -backend-config="container_name=$(stateContainer)" \
+                -backend-config="key=$(stateKey)"
+              terraform validate
+            displayName: init and validate
+            env:
+              ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+              ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+              TF_VAR_CLIENT_ID: $(ARM_CLIENT_ID)
+              TF_VAR_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
 
-              # Mask the secret in ADO logs before it's used anywhere else
-              echo "##vso[task.setvariable variable=ARM_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
+          - ${{ if eq(parameters.action, 'apply') }}:
+              - script: terraform plan -input=false -out=tfplan
+                displayName: plan
+                env:
+                  ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+                  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                  TF_VAR_CLIENT_ID: $(ARM_CLIENT_ID)
+                  TF_VAR_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
 
-              # Expose the rest of the service principal to later steps (Terraform azurerm provider)
-              echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$ARM_CLIENT_ID"
-              echo "##vso[task.setvariable variable=ARM_TENANT_ID]$ARM_TENANT_ID"
-              echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID]$ARM_SUBSCRIPTION_ID"
+              - script: terraform apply -input=false tfplan
+                displayName: apply
+                env:
+                  ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+                  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                  TF_VAR_CLIENT_ID: $(ARM_CLIENT_ID)
+                  TF_VAR_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
 
-              # Pass the same service principal to Terraform
-              echo "##vso[task.setvariable variable=TF_VAR_CLIENT_ID]$ARM_CLIENT_ID"
-              echo "##vso[task.setvariable variable=TF_VAR_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
+              - script: |
+                  az aks show --resource-group aks-terraform --name aks-terraform \
+                    --query "{state:provisioningState,nodes:agentPoolProfiles[0].count,version:kubernetesVersion}" -o table
+                displayName: Cluster status
 
-              az login --service-principal \
-                --username "$ARM_CLIENT_ID" \
-                --password "$ARM_CLIENT_SECRET" \
-                --tenant "$ARM_TENANT_ID" \
-                --output none
-
-              az account set --subscription "$ARM_SUBSCRIPTION_ID"
-
-              echo "Authenticated. Active subscription:"
-              az account show --output table
-            displayName: 'Authenticate to Azure and confirm access'
-  #         - script: |
-  #             ACCOUNT_KEY=$(az storage account keys list \
-  #               --resource-group "$(stateRg)" \
-  #               --account-name "$(stateAccount)" \
-  #               --query '[0].value' -o tsv)
-
-  #             # Mask the storage key and expose it for the azurerm backend (reads ARM_ACCESS_KEY)
-  #             echo "##vso[task.setvariable variable=ARM_ACCESS_KEY;issecret=true]$ACCOUNT_KEY"
-  #           displayName: 'Fetch Terraform remote state storage key'
-  #         - script: 'echo "$(containerRegistry)"'
-  #         - script: |
-  #             declare -A repositories=(
-  #               ["carts"]="CARTS_IMG"
-  #               ["catalogue"]="CATALOGUE_IMG"
-  #               ["catalogue-db"]="CATALOGUE_DB_IMG"
-  #               ["orders"]="ORDERS_IMG"
-  #               ["payment"]="PAYMENT_IMG"
-  #               ["queuemaster"]="QUEUE_MASTER_IMG"
-  #               ["shipping"]="SHIPPING_IMG"
-  #               ["user"]="USER_IMG"
-  #               ["user-db"]="USER_DB_IMG"
-  #               ["frontend"]="FRONTEND_IMG"
-  #             )
-
-  #             for repo in "${!repositories[@]}"; do
-  #               # Attempt to fetch the latest tag and suppress any error output
-  #               latest_tag=$(az acr repository show-tags -n sockshop1 --repository $repo --orderby time_desc --output tsv 2>/dev/null | head -n 1)
-  #               # Check if the latest_tag is empty
-  #               if [ -z "$latest_tag" ]; then
-  #                 echo "No tag found for repository $repo or repository does not exist."
-  #                 continue
-  #               fi
-
-  #               # If successful and tag is found, set the variable
-  #               img_name="$(containerRegistry)/$repo:$latest_tag"
-  #               echo "##vso[task.setvariable variable=TF_VAR_${repositories[$repo]}]$img_name"
-  #               echo "image name is: $img_name"
-  #             done
-  #             log_var=DEBUG
-  #             echo "##vso[task.setvariable variable=TF_LOG]$log_var"
-  #           displayName: 'Resolve latest image tags from ACR'
-  #         - task: TerraformInstaller@1
-  #           displayName: tfinstall
-  #           inputs:
-  #             terraformVersion: 'latest'
-  #         - script: |
-  #             terraform init -input=false \
-  #               -backend-config="resource_group_name=$(stateRg)" \
-  #               -backend-config="storage_account_name=$(stateAccount)" \
-  #               -backend-config="container_name=$(stateContainer)" \
-  #               -backend-config="key=$(stateKey)"
-  #           displayName: init
-  #           env:
-  #             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  #             ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-  #             TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  #         - script: terraform validate
-  #           displayName: validate
-  #           env:
-  #             ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  #             ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-  #             TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  # - stage: deploy
-  #   condition: succeeded('tfvalidate')
-  #   dependsOn: tfvalidate
-  #   jobs:
-  #     - job: apply
-  #       steps:
-  #       - task: DownloadSecureFile@1
-  #         name: envFile
-  #         displayName: 'Download .env secure file'
-  #         inputs:
-  #           secureFile: '.env'
-
-  #       - script: |
-  #           set -a
-  #           source "$(envFile.secureFilePath)"
-  #           set +a
-
-  #           # Mask the secret in ADO logs before it's used anywhere else
-  #           echo "##vso[task.setvariable variable=ARM_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
-
-  #           # Expose the rest of the service principal to later steps (Terraform azurerm provider)
-  #           echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$ARM_CLIENT_ID"
-  #           echo "##vso[task.setvariable variable=ARM_TENANT_ID]$ARM_TENANT_ID"
-  #           echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID]$ARM_SUBSCRIPTION_ID"
-
-  #           # Pass the same service principal to Terraform
-  #           echo "##vso[task.setvariable variable=TF_VAR_CLIENT_ID]$ARM_CLIENT_ID"
-  #           echo "##vso[task.setvariable variable=TF_VAR_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
-
-  #           az login --service-principal \
-  #             --username "$ARM_CLIENT_ID" \
-  #             --password "$ARM_CLIENT_SECRET" \
-  #             --tenant "$ARM_TENANT_ID" \
-  #             --output none
-
-  #           az account set --subscription "$ARM_SUBSCRIPTION_ID"
-
-  #           echo "Authenticated. Active subscription:"
-  #           az account show --output table
-  #         displayName: 'Authenticate to Azure and confirm access'
-  #       - script: |
-  #           ACCOUNT_KEY=$(az storage account keys list \
-  #             --resource-group "$(stateRg)" \
-  #             --account-name "$(stateAccount)" \
-  #             --query '[0].value' -o tsv)
-
-  #           # Mask the storage key and expose it for the azurerm backend (reads ARM_ACCESS_KEY)
-  #           echo "##vso[task.setvariable variable=ARM_ACCESS_KEY;issecret=true]$ACCOUNT_KEY"
-  #         displayName: 'Fetch Terraform remote state storage key'
-  #       - script: |
-  #           declare -A repositories=(
-  #             ["carts"]="CARTS_IMG"
-  #             ["catalogue"]="CATALOGUE_IMG"
-  #             ["catalogue-db"]="CATALOGUE_DB_IMG"
-  #             ["orders"]="ORDERS_IMG"
-  #             ["payment"]="PAYMENT_IMG"
-  #             ["queuemaster"]="QUEUE_MASTER_IMG"
-  #             ["shipping"]="SHIPPING_IMG"
-  #             ["user"]="USER_IMG"
-  #             ["user-db"]="USER_DB_IMG"
-  #             ["frontend"]="FRONTEND_IMG"
-  #           )
-
-  #           for repo in "${!repositories[@]}"; do
-  #             # Attempt to fetch the latest tag and suppress any error output
-  #             latest_tag=$(az acr repository show-tags -n sockshop1 --repository $repo --orderby time_desc --output tsv 2>/dev/null | head -n 1)
-  #             # Check if the latest_tag is empty
-  #             if [ -z "$latest_tag" ]; then
-  #               echo "No tag found for repository $repo or repository does not exist."
-  #               continue
-  #             fi
-
-  #             # If successful and tag is found, set the variable
-  #             img_name="$(containerRegistry)/$repo:$latest_tag"
-  #             echo "##vso[task.setvariable variable=TF_VAR_${repositories[$repo]}]$img_name"
-  #             echo "image name is: $img_name"
-  #           done
-  #           log_var=DEBUG
-  #           echo "##vso[task.setvariable variable=TF_LOG]$log_var"
-  #         displayName: 'Resolve latest image tags from ACR'
-  #       - task: TerraformInstaller@1
-  #         displayName: tfinstall
-  #         inputs:
-  #           terraformVersion: 'latest'
-  #       - script: |
-  #           terraform init -input=false \
-  #             -backend-config="resource_group_name=$(stateRg)" \
-  #             -backend-config="storage_account_name=$(stateAccount)" \
-  #             -backend-config="container_name=$(stateContainer)" \
-  #             -backend-config="key=$(stateKey)"
-  #         displayName: init
-  #         env:
-  #           ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  #           ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-  #           TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  #       - script: terraform plan -input=false -out=tfplan
-  #         displayName: plan
-  #         env:
-  #           ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  #           ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-  #           TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  #       - script: terraform apply -input=false tfplan
-  #         displayName: apply
-  #         env:
-  #           ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-  #           ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-  #           TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  #       - script: |
-  #           set -ea
-  #           source "$(envFile.secureFilePath)"
-  #           set +a
-
-  #           az aks get-credentials \
-  #             --resource-group aks-terraform \
-  #             --name aks-terraform \
-  #             --overwrite-existing
-
-  #           echo "Waiting for the front-end LoadBalancer to get an external IP..."
-  #           for i in $(seq 1 30); do
-  #             EXTERNAL_IP=$(kubectl get svc front-end -n sock-shop -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-  #             if [ -n "$EXTERNAL_IP" ]; then
-  #               break
-  #             fi
-  #             sleep 10
-  #           done
-
-  #           kubectl get svc front-end -n sock-shop
-  #           echo "Sock Shop: http://$EXTERNAL_IP"
-  #         displayName: 'Get Sock Shop external IP'
-
-  # --- DESTROY: comment out this whole stage to keep the infra after deploy ---
-  - stage: destroy
-    # dependsOn: deploy
-    jobs:
-      - job: destroy
-        steps:
-        - task: DownloadSecureFile@1
-          name: envFile
-          displayName: 'Download .env secure file'
-          inputs:
-            secureFile: '.env'
-
-        - script: |
-            set -a
-            source "$(envFile.secureFilePath)"
-            set +a
-
-            # Mask the secret in ADO logs before it's used anywhere else
-            echo "##vso[task.setvariable variable=ARM_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
-
-            # Expose the rest of the service principal to later steps (Terraform azurerm provider)
-            echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$ARM_CLIENT_ID"
-            echo "##vso[task.setvariable variable=ARM_TENANT_ID]$ARM_TENANT_ID"
-            echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID]$ARM_SUBSCRIPTION_ID"
-
-            # Pass the same service principal to Terraform
-            echo "##vso[task.setvariable variable=TF_VAR_CLIENT_ID]$ARM_CLIENT_ID"
-            echo "##vso[task.setvariable variable=TF_VAR_CLIENT_SECRET;issecret=true]$ARM_CLIENT_SECRET"
-
-            az login --service-principal \
-              --username "$ARM_CLIENT_ID" \
-              --password "$ARM_CLIENT_SECRET" \
-              --tenant "$ARM_TENANT_ID" \
-              --output none
-
-            az account set --subscription "$ARM_SUBSCRIPTION_ID"
-
-            echo "Authenticated. Active subscription:"
-            az account show --output table
-          displayName: 'Authenticate to Azure and confirm access'
-        - script: |
-            ACCOUNT_KEY=$(az storage account keys list \
-              --resource-group "$(stateRg)" \
-              --account-name "$(stateAccount)" \
-              --query '[0].value' -o tsv)
-
-            # Mask the storage key and expose it for the azurerm backend (reads ARM_ACCESS_KEY)
-            echo "##vso[task.setvariable variable=ARM_ACCESS_KEY;issecret=true]$ACCOUNT_KEY"
-          displayName: 'Fetch Terraform remote state storage key'
-        - task: TerraformInstaller@1
-          displayName: tfinstall
-          inputs:
-            terraformVersion: 'latest'
-        - script: |
-            terraform init -input=false \
-              -backend-config="resource_group_name=$(stateRg)" \
-              -backend-config="storage_account_name=$(stateAccount)" \
-              -backend-config="container_name=$(stateContainer)" \
-              -backend-config="key=$(stateKey)"
-          displayName: init
-          env:
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-            TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-        - script: terraform destroy -input=false -auto-approve
-          displayName: destroy
-          env:
-            ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-            ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-            TF_VAR_CLIENT_SECRET: $(TF_VAR_CLIENT_SECRET)
-  # --- end DESTROY ---
+          - ${{ if eq(parameters.action, 'destroy') }}:
+              - script: terraform destroy -input=false -auto-approve
+                displayName: destroy
+                env:
+                  ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+                  ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+                  TF_VAR_CLIENT_ID: $(ARM_CLIENT_ID)
+                  TF_VAR_CLIENT_SECRET: $(ARM_CLIENT_SECRET)

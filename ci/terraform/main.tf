@@ -162,3 +162,27 @@ resource "azuredevops_build_definition" "pipeline" {
 
   depends_on = [azuredevops_pipeline_authorization.github]
 }
+
+# ----------------------------------------------------------- infra pipeline
+
+# Prerequisites (state storage, resource group, ACR) and the AKS cluster; defined by the
+# azure-pipelines.yml in the root of this repository.
+resource "azuredevops_build_definition" "infra" {
+  project_id = data.azuredevops_project.project.id
+  name       = "infra"
+  path       = "\\service-release"
+
+  ci_trigger {
+    use_yaml = true
+  }
+
+  repository {
+    repo_type             = "GitHub"
+    repo_id               = var.capstone_github_repo
+    branch_name           = var.capstone_branch
+    yml_path              = "azure-pipelines.yml"
+    service_connection_id = data.azuredevops_serviceendpoint_github.github.id
+  }
+
+  depends_on = [azuredevops_pipeline_authorization.github]
+}

@@ -28,16 +28,28 @@ Create a variable group named `aks-terraform` containing:
 
 Create a pipeline from `azure-pipelines.yml` in the `azure-kubernetes-service-deploy` repo. On a new Azure DevOps organization, make sure a Microsoft-hosted parallel job has been granted.
 
-4. ### Run the pipeline
+4. ### Run the infrastructure pipeline
 
-Run `azure-pipelines.yml`. It has four stages:
-- `bootstrap`: provisions the Terraform remote state resource group, storage account and container, the `aks-terraform` resource group, the `sockshop1` Azure Container Registry, and the `AcrPull` role assignment for the service principal. It is idempotent, so re-running is safe.
-- `tfvalidate`: runs `terraform init` and `terraform validate`.
-- `deploy`: plans and applies the cluster and Sock Shop.
-- `destroy`: runs `terraform destroy`. Comment out this whole stage in the YAML to keep the infra up after a run.
-- At the end of `deploy`, the `Get Sock Shop external IP` step prints the public URL of the shop. The shop is only reachable while the infra exists, so comment out the `destroy` stage to browse it.
+Run `azure-pipelines.yml` (the `infra` pipeline). It has two stages:
+- `bootstrap`: provisions the Terraform remote state resource group, storage account and container, the `aks-terraform` resource group and the `sockshop1` Azure Container Registry. It is idempotent, so re-running is safe.
+- `cluster`: `terraform init`, `validate`, `plan` and `apply` of the AKS cluster. The `action` parameter can be set to `destroy` to remove the cluster (destroy the environments first).
 
-By default the pipeline deploys the public `weaveworksdemos` images. To deploy your own images instead, see the optional steps below.
+The pipeline also runs when infrastructure files are pushed to `main`.
+
+One-time permission: the pipeline's service principal cannot create role assignments, so the
+`AcrPull` grant for the cluster's service principal is done once by an account that can:
+
+```
+CLIENT_ID=$(az aks show -g aks-terraform -n aks-terraform --query servicePrincipalProfile.clientId -o tsv)
+az role assignment create --assignee "$CLIENT_ID" --role AcrPull \
+  --scope "$(az acr show -n sockshop1 -g aks-terraform --query id -o tsv)"
+```
+
+5. ### Deploy the Sock Shop
+
+The application is not deployed by the infrastructure pipeline. Each environment (dev, staging,
+prod) is a namespace on the cluster, deployed by `release-dev` (automatic after a service build
+succeeds) and `promote` (manual, gated). See [`ci/README.md`](ci/README.md#delivery-dev---staging---prod).
 
 ## Optional: build your own images into ACR
 

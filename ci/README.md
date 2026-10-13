@@ -82,7 +82,7 @@ deployed once approved. A resource administrator can bypass a check; Azure DevOp
   (the YAML must already be on this repository's default branch).
 - Authorize the `.env` secure file for the new pipelines (Pipelines > Library > Secure files > `.env`
   > Security, or "Permit" on the first run).
-- Apply the root module once so the cluster no longer contains the old single `sock-shop` deployment;
+- The root module now only contains the cluster;
   the environments are created by the first `release-dev` run.
 - Tearing an environment down: `terraform destroy` in `envs/` with that environment's state key
   and `-var environment=<env>`.
