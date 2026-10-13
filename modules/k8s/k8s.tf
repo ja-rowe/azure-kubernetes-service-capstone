@@ -7,6 +7,6 @@ provider "kubernetes" {
 
 resource "kubernetes_namespace" "sock_shop" {
   metadata {
-    name = "sock-shop"
+    name = var.namespace
   }
 }

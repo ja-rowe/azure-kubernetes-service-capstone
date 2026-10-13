@@ -1,0 +1,65 @@
+# Deploys the Sock Shop into one environment (namespace on the shared cluster) with the image set
+# in the `images` environment variable (JSON map), then smoke-tests it.
+parameters:
+  - name: environment
+    type: string
+
+steps:
+  - task: TerraformInstaller@1
+    displayName: Install Terraform
+    inputs:
+      terraformVersion: latest
+
+  - script: |
+      set -euo pipefail
+      cd envs
+      terraform init -input=false \
+        -backend-config="resource_group_name=$(stateRg)" \
+        -backend-config="storage_account_name=$(stateAccount)" \
+        -backend-config="container_name=$(stateContainer)" \
+        -backend-config="key=env-${{ parameters.environment }}.tfstate"
+
+      jq -n --argjson images "$IMAGES" '{images: $images}' > images.auto.tfvars.json
+      terraform apply -input=false -auto-approve -var "environment=${{ parameters.environment }}"
+    displayName: Deploy ${{ parameters.environment }} (terraform apply)
+    env:
+      IMAGES: $(images)
+      ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
+      ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+
+  - script: |
+      set -euo pipefail
+      NS="sock-shop-${{ parameters.environment }}"
+      az aks get-credentials --resource-group aks-terraform --name aks-terraform --overwrite-existing >/dev/null
+
+      echo "Waiting for the front-end load balancer address..."
+      IP=""
+      for i in $(seq 1 60); do
+        IP=$(kubectl get svc front-end -n "$NS" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+        [ -n "$IP" ] && break
+        sleep 10
+      done
+      if [ -z "$IP" ]; then
+        kubectl get pods -n "$NS" -o wide || true
+        echo "##vso[task.logissue type=error]No external IP for front-end in $NS"
+        exit 1
+      fi
+
+      echo "Waiting for the shop to answer on http://$IP ..."
+      ok=""
+      for i in $(seq 1 60); do
+        code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://$IP/" || true)
+        cat=$(curl -s -m 10 "http://$IP/catalogue?size=1" || true)
+        if [ "$code" = "200" ] && echo "$cat" | jq -e 'length > 0' >/dev/null 2>&1; then ok=yes; break; fi
+        sleep 10
+      done
+      if [ -z "$ok" ]; then
+        kubectl get pods -n "$NS" -o wide || true
+        kubectl describe pods -n "$NS" 2>/dev/null | grep -E "Image|Failed|BackOff|Error" | head -30 || true
+        echo "##vso[task.logissue type=error]Smoke test failed for $NS (http://$IP)"
+        exit 1
+      fi
+
+      echo "Smoke test passed. ${{ parameters.environment }}: http://$IP"
+      echo "##vso[task.setvariable variable=environmentUrl]http://$IP"
+    displayName: Smoke test ${{ parameters.environment }}

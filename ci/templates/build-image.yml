@@ -18,13 +18,23 @@ steps:
   - checkout: svc
     path: svc
     fetchDepth: 0
+    persistCredentials: true   # lets the main-ancestry check fetch origin/main if it is missing
 
   - script: |
       sha="$(cat "$(Pipeline.Workspace)/tests/commit/sha.txt")"
       echo "Building tested commit $sha"
       git checkout --detach "$sha"
+
+      # Only commits that are part of main's history may produce a deployable image, so every
+      # image in ACR (and anything promoted from it) came from main.
+      git rev-parse --verify --quiet origin/main >/dev/null || git fetch --quiet origin main
+      if ! git merge-base --is-ancestor "$sha" origin/main; then
+        echo "##vso[task.logissue type=error]Commit $sha is not on main; refusing to build a release image."
+        exit 1
+      fi
+      echo "Commit $sha is on main."
     workingDirectory: $(Pipeline.Workspace)/svc
-    displayName: Check out the tested commit
+    displayName: Check out the tested commit and verify it is on main
 
   - ${{ if eq(parameters.maven, true) }}:
       - script: |

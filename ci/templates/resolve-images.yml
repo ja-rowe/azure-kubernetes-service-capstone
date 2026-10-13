@@ -1,0 +1,43 @@
+# Resolves, for every service, the newest image built into ACR and pins it by digest.
+# Services without an ACR image fall back to the public Docker Hub image.
+# Emits the JSON map as output variable `images` of the step named `resolve`.
+steps:
+  - script: |
+      set -euo pipefail
+      ACR=sockshop1
+      LOGIN=$(az acr show -n "$ACR" --query loginServer -o tsv)
+
+      # service -> ACR repository (pipelines push queuemaster / frontend without hyphen)
+      declare -A repo=( [carts]=carts [catalogue]=catalogue [catalogue-db]=catalogue-db [orders]=orders \
+                        [payment]=payment [queue-master]=queuemaster [shipping]=shipping [user]=user \
+                        [user-db]=user-db [front-end]=frontend )
+      declare -A fallback=( [carts]=weaveworksdemos/carts:0.4.8 [catalogue]=weaveworksdemos/catalogue:0.3.5 \
+                            [catalogue-db]=weaveworksdemos/catalogue-db:0.3.0 [orders]=weaveworksdemos/orders:0.4.7 \
+                            [payment]=weaveworksdemos/payment:0.4.3 [queue-master]=weaveworksdemos/queue-master:0.3.1 \
+                            [shipping]=weaveworksdemos/shipping:0.4.8 [user]=weaveworksdemos/user:0.4.7 \
+                            [user-db]=weaveworksdemos/user-db:0.3.0 [front-end]=weaveworksdemos/front-end:0.3.12 )
+
+      images='{}'
+      : > images.md
+      echo "| service | source | image |" >> images.md
+      echo "|---|---|---|" >> images.md
+      for svc in carts catalogue catalogue-db orders payment queue-master shipping user user-db front-end; do
+        r="${repo[$svc]}"
+        # the BuildId tag (numeric) of the newest build; `latest` is mutable and never used
+        tag=$(az acr repository show-tags -n "$ACR" --repository "$r" -o tsv 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1 || true)
+        if [ -n "$tag" ]; then
+          digest=$(az acr repository show -n "$ACR" --image "$r:$tag" --query digest -o tsv)
+          ref="$LOGIN/$r@$digest"
+          echo "| $svc | ACR build $tag | \`$ref\` |" >> images.md
+        else
+          ref="${fallback[$svc]}"
+          echo "| $svc | Docker Hub (no ACR build yet) | \`$ref\` |" >> images.md
+        fi
+        echo "$svc -> $ref"
+        images=$(jq -c --arg k "$svc" --arg v "$ref" '. + {($k): $v}' <<<"$images")
+      done
+
+      echo "##vso[task.setvariable variable=images;isOutput=true]$images"
+      echo "##vso[task.uploadsummary]$PWD/images.md"
+    name: resolve
+    displayName: Resolve latest images from ACR (by digest)

@@ -43,3 +43,8 @@ variable "USER_DB_IMG" {
 
 variable "FRONTEND_IMG" {
 }
+
+variable "namespace" {
+  description = "Kubernetes namespace the Sock Shop is deployed into"
+  default     = "sock-shop"
+}

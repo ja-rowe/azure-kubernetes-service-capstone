@@ -1,0 +1,97 @@
+# Continuous delivery to dev.
+#
+# Runs automatically when any service's build pipeline succeeds (which itself only runs after the
+# service's tests passed): resolves the newest image of every service from ACR (pinned by digest)
+# and deploys that set to the `dev` environment. Staging and prod are reached with promote.yml.
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-24.04
+
+resources:
+  pipelines:
+    - pipeline: carts_build
+      source: carts-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: orders_build
+      source: orders-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: shipping_build
+      source: shipping-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: queue_master_build
+      source: queue-master-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: user_build
+      source: user-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: payment_build
+      source: payment-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: catalogue_build
+      source: catalogue-build
+      trigger:
+        branches:
+          include:
+            - main
+    - pipeline: front_end_build
+      source: front-end-build
+      trigger:
+        branches:
+          include:
+            - main
+
+variables:
+  - name: stateRg
+    value: t3-capstone-tfstate-rg
+  - name: stateAccount
+    value: t3capstonetfstate
+  - name: stateContainer
+    value: tfstate
+
+stages:
+  - stage: Resolve
+    jobs:
+      - job: resolveJob
+        steps:
+          - checkout: none
+          - template: templates/azure-login.yml
+          - template: templates/resolve-images.yml
+
+  - stage: Dev
+    dependsOn: Resolve
+    # A newer build's deploy supersedes an older queued one: every run deploys the newest images.
+    lockBehavior: runLatest
+    jobs:
+      - deployment: deploy
+        environment: dev
+        variables:
+          images: $[ stageDependencies.Resolve.resolveJob.outputs['resolve.images'] ]
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: templates/azure-login.yml
+                - template: templates/deploy-env.yml
+                  parameters:
+                    environment: dev

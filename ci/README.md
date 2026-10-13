@@ -21,10 +21,71 @@ Services: `carts`, `orders`, `shipping`, `queue-master`, `user`, `payment`, `cat
 - `templates/test-java.yml`, `test-go.yml`, `test-node.yml` – language-specific unit-test steps
 - `templates/publish-sha.yml` – records the commit that was tested
 - `templates/build-image.yml` – optional Maven package + `Docker@2 buildAndPush`
-- `<svc>-test.yml`, `<svc>-build.yml` – the 16 pipeline definitions (a few lines each)
+- `<svc>-test.yml`, `<svc>-build.yml` – the 16 CI pipeline definitions (a few lines each)
+- `release-dev.yml`, `promote.yml` – delivery to dev and manual promotion (see below)
+- `templates/azure-login.yml`, `resolve-images.yml`, `read-env-images.yml`, `deploy-env.yml` – delivery steps
 - `create-repos.sh` – creates the Azure Repos repositories and pushes the local service repos
 - `terraform/` – the Azure DevOps configuration (ACR service connection, variable group,
   authorizations and the 16 pipelines)
+
+## Delivery: dev -> staging -> prod
+
+```
+<svc>-build succeeds ─► release-dev (automatic) ─► environment dev        namespace sock-shop-dev
+promote (manual, target=staging) ─► environment staging   [branch control + approval]  sock-shop-staging
+promote (manual, target=prod)    ─► environment prod      [branch control + approval]  sock-shop-prod
+```
+
+All three environments are namespaces on the one AKS cluster (`aks-terraform`); each has its own
+Terraform state (`env-dev|staging|prod.tfstate`) and its own public front-end IP. The cluster is
+managed by the root Terraform module, the application by [`envs/`](../envs).
+
+| Pipeline | File | Trigger | What it does |
+|---|---|---|---|
+| `release-dev` | `ci/release-dev.yml` | any `<svc>-build` succeeds (branch `main`) | Resolves the newest image of every service from ACR **by digest**, deploys that set to `dev`, smoke-tests it |
+| `promote` | `ci/promote.yml` | manual, parameter `environment` = `staging` or `prod` | Reads the image set running in the previous environment (dev for staging, staging for prod), deploys exactly that set, smoke-tests it |
+
+**Same image everywhere.** Images are deployed as `registry/repo@sha256:...`. Each environment's
+Terraform state outputs the `images` it runs; `promote` applies the source environment's output to
+the target, so what reaches prod is byte-for-byte what ran in staging, and prod can only receive
+what staging already runs.
+
+**Only changes from `main`.** (1) test pipelines only trigger on `main`; (2) the build pipeline
+fails unless the tested commit is an ancestor of the service repo's `main`, so every image in ACR
+came from `main`; (3) the `staging` and `prod` environments have a **Branch control** check that
+only allows runs from `refs/heads/main`.
+
+**Approvals and checks** are configured on the environments (`ci/terraform/environments.tf`), not in
+the YAML, and Azure DevOps evaluates them before the stage that uses the environment starts, in this
+order: Branch control -> Approval -> Exclusive lock.
+
+| Environment | Branch control | Approval | Exclusive lock |
+|---|---|---|---|
+| `dev` | - | - | yes (`runLatest`: a newer deploy supersedes a queued older one) |
+| `staging` | `refs/heads/main` | the PAT owner (may approve their own run), 7 day timeout | yes (`sequential`) |
+| `prod` | `refs/heads/main` | the PAT owner (may approve their own run), 7 day timeout | yes (`sequential`) |
+
+### Promoting
+
+```
+az pipelines run --name promote --branch main --parameters environment=staging
+# open the run, review the image digests in the Resolve stage summary, approve the Deploy stage
+az pipelines run --name promote --branch main --parameters environment=prod
+```
+
+The image set is captured in the `Resolve` stage (shown in the run summary) and that exact set is
+deployed once approved. A resource administrator can bypass a check; Azure DevOps records who did.
+
+### One-time setup for delivery
+
+- `terraform apply` in `ci/terraform` creates the environments, checks and the two pipelines
+  (the YAML must already be on this repository's default branch).
+- Authorize the `.env` secure file for the new pipelines (Pipelines > Library > Secure files > `.env`
+  > Security, or "Permit" on the first run).
+- Apply the root module once so the cluster no longer contains the old single `sock-shop` deployment;
+  the environments are created by the first `release-dev` run.
+- Tearing an environment down: `terraform destroy` in `envs/` with that environment's state key
+  and `-var environment=<env>`.
 
 ## What the tests run
 

@@ -1,0 +1,67 @@
+# Manual promotion: staging gets exactly what runs in dev, prod gets exactly what runs in staging.
+#
+# Queue this pipeline from `main` and choose the target environment. The environments `staging`
+# and `prod` carry a Branch control check (refs/heads/main only) and an Approval check, both
+# evaluated by Azure DevOps before the Deploy stage starts. The image set is captured in the
+# Resolve stage (see its run summary) and that exact set is what gets deployed after approval.
+trigger: none
+pr: none
+
+parameters:
+  - name: environment
+    displayName: Target environment
+    type: string
+    default: staging
+    values:
+      - staging
+      - prod
+
+pool:
+  vmImage: ubuntu-24.04
+
+variables:
+  - name: stateRg
+    value: t3-capstone-tfstate-rg
+  - name: stateAccount
+    value: t3capstonetfstate
+  - name: stateContainer
+    value: tfstate
+  # The environment each target is promoted from.
+  - ${{ if eq(parameters.environment, 'staging') }}:
+      - name: sourceEnvironment
+        value: dev
+  - ${{ if eq(parameters.environment, 'prod') }}:
+      - name: sourceEnvironment
+        value: staging
+
+stages:
+  - stage: Resolve
+    displayName: Resolve the images to promote
+    jobs:
+      - job: resolveJob
+        steps:
+          - checkout: self
+          - template: templates/azure-login.yml
+          - template: templates/read-env-images.yml
+            parameters:
+              sourceEnvironment: $(sourceEnvironment)
+
+  - stage: Deploy
+    displayName: Deploy to ${{ parameters.environment }}
+    dependsOn: Resolve
+    # Never drop a promotion: queued runs go through one at a time.
+    lockBehavior: sequential
+    jobs:
+      - deployment: deploy
+        environment: ${{ parameters.environment }}
+        variables:
+          images: $[ stageDependencies.Resolve.resolveJob.outputs['resolve.images'] ]
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: templates/azure-login.yml
+                - template: templates/deploy-env.yml
+                  parameters:
+                    environment: ${{ parameters.environment }}

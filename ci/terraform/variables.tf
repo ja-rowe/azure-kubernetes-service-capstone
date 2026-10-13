@@ -35,3 +35,8 @@ variable "identity_resource_group" {
 variable "location" {
   default = "centralus"
 }
+
+variable "approver_principal_name" {
+  description = "Sign-in name of the user who approves promotions to staging and prod"
+  default     = "sunkwenga@gmail.com"
+}
