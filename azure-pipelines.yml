@@ -15,6 +15,9 @@ trigger:
       - azure-pipelines.yml
       - main.tf
       - variables.tf
+      - outputs.tf
+      - identities.tf
+      - keyvaults.tf
       - modules/cluster/*
 
 pr: none

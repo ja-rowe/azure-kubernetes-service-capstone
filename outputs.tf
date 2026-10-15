@@ -48,3 +48,20 @@ output "environment_identities" {
     }
   }
 }
+
+output "tenant_id" {
+  value = data.azurerm_client_config.current.tenant_id
+}
+
+output "oidc_issuer_url" {
+  value = module.cluster.oidc_issuer_url
+}
+
+output "key_vaults" {
+  value = {
+    for env, kv in azurerm_key_vault.environment : env => {
+      name = kv.name
+      uri  = kv.vault_uri
+    }
+  }
+}

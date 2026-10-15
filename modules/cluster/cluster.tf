@@ -30,6 +30,14 @@ resource "azurerm_kubernetes_cluster" "aks-terraform" {
   }
   local_account_disabled = false
 
+  # Workload identity: pods can authenticate as a managed identity through a federated
+  # ServiceAccount, and the Key Vault CSI driver mounts secrets with that identity.
+  oidc_issuer_enabled       = true
+  workload_identity_enabled = true
+  key_vault_secrets_provider {
+    secret_rotation_enabled = true
+  }
+
   network_profile {
     network_plugin    = "kubenet"
     load_balancer_sku = "standard"

@@ -43,3 +43,7 @@ output "kubelet_identity_object_id" {
 output "principal_id" {
   value = try(azurerm_kubernetes_cluster.aks-terraform.identity[0].principal_id, null)
 }
+
+output "oidc_issuer_url" {
+  value = azurerm_kubernetes_cluster.aks-terraform.oidc_issuer_url
+}

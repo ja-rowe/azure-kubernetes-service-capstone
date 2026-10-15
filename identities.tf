@@ -18,3 +18,14 @@ resource "azurerm_user_assigned_identity" "environment" {
     purpose     = "sock-shop deployments to ${each.key}"
   }
 }
+
+# Pods in an environment's namespace that use the sock-shop-secrets ServiceAccount authenticate
+# as that environment's identity (workload identity), e.g. to read the environment's Key Vault.
+resource "azurerm_federated_identity_credential" "namespace_workload" {
+  for_each                  = azurerm_user_assigned_identity.environment
+  name                      = "aks-sock-shop-${each.key}-secrets"
+  user_assigned_identity_id = each.value.id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = module.cluster.oidc_issuer_url
+  subject                   = "system:serviceaccount:sock-shop-${each.key}:sock-shop-secrets"
+}
