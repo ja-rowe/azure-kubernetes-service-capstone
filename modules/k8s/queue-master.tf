@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "queue_master" {
   metadata {
     name      = "queue-master"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "queue-master"
     }
@@ -85,7 +85,7 @@ resource "kubernetes_deployment" "queue_master" {
 resource "kubernetes_service" "queue_master" {
   metadata {
     name      = "queue-master"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "queue-master"
     }

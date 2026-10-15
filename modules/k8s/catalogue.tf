@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "catalogue" {
   metadata {
     name      = "catalogue"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "catalogue"
     }
@@ -104,7 +104,7 @@ resource "kubernetes_deployment" "catalogue" {
 resource "kubernetes_service" "catalogue" {
   metadata {
     name      = "catalogue"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "catalogue"
     }

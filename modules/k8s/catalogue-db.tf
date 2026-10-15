@@ -1,9 +1,7 @@
 resource "kubernetes_deployment" "catalogue_db" {
-  depends_on = [kubernetes_manifest.secret_provider_class]
-
   metadata {
     name      = "catalogue-db"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "catalogue-db"
     }
@@ -33,7 +31,7 @@ resource "kubernetes_deployment" "catalogue_db" {
 
       spec {
         # Runs as the environment's identity (workload identity) to read its Key Vault.
-        service_account_name = kubernetes_service_account.secrets.metadata[0].name
+        service_account_name = local.service_account_name
 
         container {
           name  = "catalogue-db"
@@ -89,7 +87,7 @@ resource "kubernetes_deployment" "catalogue_db" {
 resource "kubernetes_service" "catalogue_db" {
   metadata {
     name      = "catalogue-db"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "catalogue-db"
     }

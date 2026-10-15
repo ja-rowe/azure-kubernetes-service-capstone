@@ -8,12 +8,10 @@ variable "environment" {
   }
 }
 
-variable "cluster_name" {
-  default = "aks-terraform"
-}
-
-variable "cluster_resource_group" {
-  default = "aks-terraform"
+variable "kubeconfig" {
+  description = "Path to a kubeconfig signed in as the environment's identity (Entra ID, kubelogin)"
+  type        = string
+  default     = "~/.kube/config"
 }
 
 # Image reference per service. Deployed by digest (registry/repo@sha256:...) so an environment
@@ -31,16 +29,3 @@ variable "images" {
     error_message = "images must contain carts, catalogue, catalogue-db, orders, payment, queue-master, shipping, user, user-db and front-end."
   }
 }
-
-variable "state_resource_group" {
-  default = "t3-capstone-tfstate-rg"
-}
-
-variable "state_storage_account" {
-  default = "t3capstonetfstate"
-}
-
-variable "state_container" {
-  default = "tfstate"
-}
-

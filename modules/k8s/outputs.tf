@@ -1,5 +1,5 @@
 output "namespace" {
-  value = data.kubernetes_namespace.sock_shop.metadata.0.name
+  value = var.namespace
 }
 
 # Empty until the cloud load balancer has assigned an address.

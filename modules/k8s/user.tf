@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "user" {
   metadata {
     name      = "user"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "user"
     }
@@ -106,7 +106,7 @@ resource "kubernetes_deployment" "user" {
 resource "kubernetes_service" "user" {
   metadata {
     name      = "user"
-    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = var.namespace
     labels = {
       name = "user"
     }
