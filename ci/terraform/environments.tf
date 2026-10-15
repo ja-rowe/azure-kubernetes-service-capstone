@@ -96,3 +96,35 @@ resource "azuredevops_build_definition" "delivery" {
     azuredevops_pipeline_authorization.github,
   ]
 }
+
+# ----------------------------------------------------------- security scanning
+
+# Standalone security scan (ci/security-scan.yml); manual until it is wired into the release path.
+resource "azuredevops_build_definition" "security_scan" {
+  project_id = data.azuredevops_project.project.id
+  name       = "security-scan"
+  path       = "\\service-release"
+
+  ci_trigger {
+    use_yaml = true
+  }
+
+  repository {
+    repo_type             = "GitHub"
+    repo_id               = var.capstone_github_repo
+    branch_name           = var.capstone_branch
+    yml_path              = "ci/security-scan.yml"
+    service_connection_id = data.azuredevops_serviceendpoint_github.github.id
+  }
+
+  depends_on = [azuredevops_pipeline_authorization.github]
+}
+
+# The scan reads every service repository (dependency scan).
+resource "azuredevops_pipeline_authorization" "security_scan_repository" {
+  for_each    = toset(local.services)
+  project_id  = data.azuredevops_project.project.id
+  resource_id = data.azuredevops_git_repository.service[each.key].id
+  type        = "repository"
+  pipeline_id = azuredevops_build_definition.security_scan.id
+}
