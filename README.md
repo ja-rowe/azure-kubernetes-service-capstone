@@ -37,13 +37,9 @@ Run `azure-pipelines.yml` (the `infra` pipeline). It has two stages:
 The pipeline also runs when infrastructure files are pushed to `main`.
 
 One-time permission: the pipeline's service principal cannot create role assignments, so the
-`AcrPull` grant for the cluster's service principal is done once by an account that can:
-
-```
-CLIENT_ID=$(az aks show -g aks-terraform -n aks-terraform --query servicePrincipalProfile.clientId -o tsv)
-az role assignment create --assignee "$CLIENT_ID" --role AcrPull \
-  --scope "$(az acr show -n sockshop1 -g aks-terraform --query id -o tsv)"
-```
+grants it needs (`AcrPull` on the registry for the cluster's service principal) live in the
+[`access/`](access/main.tf) Terraform root, applied by an operator account after the cluster exists
+(commands in `access/main.tf`).
 
 5. ### Deploy the Sock Shop
 

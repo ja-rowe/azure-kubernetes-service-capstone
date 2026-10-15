@@ -1,5 +1,5 @@
 variable "location" {
-    default = "centralus"
+  default = "centralus"
 }
 
 variable "CLIENT_ID" {
@@ -7,5 +7,5 @@ variable "CLIENT_ID" {
 }
 
 variable "CLIENT_SECRET" {
-  
+
 }

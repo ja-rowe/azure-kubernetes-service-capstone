@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     azurerm = {
-      source = "hashicorp/azurerm"
+      source  = "hashicorp/azurerm"
       version = "~> 5.8.0"
     }
   }
@@ -17,7 +17,7 @@ provider "azurerm" {
 }
 
 module "cluster" {
-    source = "./modules/cluster"
-    client_id = var.CLIENT_ID
-    client_secret = var.CLIENT_SECRET
+  source        = "./modules/cluster"
+  client_id     = var.CLIENT_ID
+  client_secret = var.CLIENT_SECRET
 }

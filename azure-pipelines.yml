@@ -137,35 +137,6 @@ stages:
               --output none
           displayName: 'Provision resource group and Azure Container Registry'
 
-        - script: |
-            set -e
-            source "$(envFile.secureFilePath)"
-
-            ACR_ID=$(az acr show --name sockshop1 --resource-group aks-terraform --query id -o tsv)
-
-            # Skip if the service principal already has AcrPull on the registry
-            EXISTING=$(az role assignment list \
-              --assignee "$ARM_CLIENT_ID" \
-              --role AcrPull \
-              --scope "$ACR_ID" \
-              --query '[0].id' -o tsv)
-
-            if [ -z "$EXISTING" ]; then
-              az role assignment create \
-                --assignee "$ARM_CLIENT_ID" \
-                --assignee-principal-type ServicePrincipal \
-                --role AcrPull \
-                --scope "$ACR_ID" \
-                --output none
-              echo "AcrPull assigned."
-            else
-              echo "AcrPull already assigned."
-            fi
-          displayName: 'Assign AcrPull to the service principal'
-          # Disabled: the pipeline's service principal is not allowed to create role assignments.
-          # Grant AcrPull to the cluster's service principal once with an account that can (see README).
-          enabled: false
-
   - stage: cluster
     displayName: Cluster (${{ parameters.action }})
     dependsOn: bootstrap
