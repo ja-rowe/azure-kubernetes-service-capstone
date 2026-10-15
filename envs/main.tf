@@ -26,7 +26,10 @@ provider "azurerm" {
   features {}
 }
 
-# Credentials of the existing cluster. No depends_on: the cluster is managed by the root module,
+# Credentials of the existing cluster. With Entra ID integration only the local admin config
+# carries a client certificate; this is temporary until deployments authenticate with the
+# environment's Entra identity.
+# No depends_on: the cluster is managed by the root module,
 # and a depends_on here would defer the read and leave the kubernetes provider unconfigured.
 data "azurerm_kubernetes_cluster" "cluster" {
   name                = var.cluster_name
@@ -37,10 +40,10 @@ module "k8s" {
   source = "../modules/k8s"
 
   namespace              = "sock-shop-${var.environment}"
-  host                   = data.azurerm_kubernetes_cluster.cluster.kube_config.0.host
-  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config.0.client_certificate)
-  client_key             = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_config.0.cluster_ca_certificate)
+  host                   = data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.host
+  client_certificate     = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.client_certificate)
+  client_key             = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.client_key)
+  cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.cluster_ca_certificate)
 
   CARTS_IMG        = var.images["carts"]
   CATALOGUE_IMG    = var.images["catalogue"]
