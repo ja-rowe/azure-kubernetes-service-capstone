@@ -66,10 +66,6 @@ removed {
   }
 }
 
-removed {
-  from = module.k8s.kubernetes_manifest.secret_provider_class
-
-  lifecycle {
-    destroy = false
-  }
-}
+# The SecretProviderClass (also moved to platform/) was taken out of dev's state by the operator
+# with `terraform state rm`: a removed block for a kubernetes_manifest still makes the provider
+# look up its CRD, which is cluster-scoped and denied to the environment identity.
