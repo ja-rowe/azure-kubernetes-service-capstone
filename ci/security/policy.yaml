@@ -1,0 +1,8 @@
+# Security scanning policy (machine-readable defaults). Prose version: policy.md.
+scanner:
+  image: aquasec/trivy:0.75.0   # pinned; keep ci/templates/scan-*.yml scannerImage default in sync
+defaults:
+  block_severities: CRITICAL     # a finding at these severities blocks (vulnerabilities only if a fix exists)
+  warn_severities: HIGH          # reported as pipeline warnings, never blocks
+exceptions:
+  max_days: 90                   # an exception may not be granted for longer than this

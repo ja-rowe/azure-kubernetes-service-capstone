@@ -1,0 +1,58 @@
+# Scans infrastructure as code (Terraform source, or a plan JSON) for misconfigurations.
+parameters:
+  - name: scope              # exception scope and report name, e.g. image:carts, pkg:carts, iac
+    type: string
+  - name: blockSeverities
+    type: string
+    default: CRITICAL
+  - name: warnSeverities
+    type: string
+    default: HIGH
+  - name: useExceptions
+    type: boolean
+    default: true
+  - name: scannerImage       # keep in sync with ci/security/policy.yaml
+    type: string
+    default: aquasec/trivy:0.75.0
+  - name: path               # directory (or plan JSON) on the agent
+    type: string
+
+steps:
+  - script: |
+      set -uo pipefail
+      SEC="$(Pipeline.Workspace)/self/ci/security"
+      NAME="$(echo '${{ parameters.scope }}' | tr ':/' '__')"
+      OUT="$(Build.ArtifactStagingDirectory)/security/$NAME"
+      mkdir -p "$OUT"
+
+      # Reviewed exceptions for this target (validated; expired ones no longer suppress).
+      if [ "${{ parameters.useExceptions }}" = "True" ]; then
+        "$(Agent.TempDirectory)/secvenv/bin/python" "$SEC/render_exceptions.py" \
+          --scope '${{ parameters.scope }}' --out "$OUT/trivyignore.yaml" || exit 1
+      else
+        echo "Exceptions disabled for this run"; echo '{}' > "$OUT/trivyignore.yaml"
+      fi
+
+      trivy() {
+        docker run --rm \
+          -v "$(Agent.TempDirectory)/trivy-cache:/root/.cache/trivy" \
+          -v "$OUT:/out" \
+          -v "$HOME/.docker/config.json:/root/.docker/config.json:ro" \
+          -v "${{ parameters.path }}:/src:ro" \
+          ${{ parameters.scannerImage }} "$@"
+      }
+      scanner_error() {
+        echo "##vso[task.logissue type=error]${{ parameters.scope }}: scanner error ($1, exit $2) - result is inconclusive, not clean"
+        exit 1
+      }
+
+      trivy config --quiet --format json --output "/out/$NAME.json" --show-suppressed \
+        --ignorefile /out/trivyignore.yaml --tf-exclude-downloaded-modules /src || scanner_error "IaC scan" $?
+      trivy config --quiet --format sarif --output "/out/$NAME.sarif" \
+        --ignorefile /out/trivyignore.yaml --tf-exclude-downloaded-modules /src || scanner_error "SARIF report" $?
+
+      python3 "$SEC/evaluate.py" --report "$OUT/$NAME.json" --name '${{ parameters.scope }}' \
+        --block '${{ parameters.blockSeverities }}' --warn '${{ parameters.warnSeverities }}' \
+        --summary "$(Agent.TempDirectory)/security-summary.md"
+    displayName: Scan ${{ parameters.scope }}
+    condition: succeededOrFailed()

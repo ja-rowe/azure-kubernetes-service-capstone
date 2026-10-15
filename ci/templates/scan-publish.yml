@@ -1,0 +1,14 @@
+# Publishes the security reports of a job and its summary table. Runs even if a scan blocked.
+parameters:
+  - name: artifactName
+    type: string
+
+steps:
+  - script: echo "##vso[task.uploadsummary]$(Agent.TempDirectory)/security-summary.md"
+    displayName: Security summary
+    condition: always()
+
+  - publish: $(Build.ArtifactStagingDirectory)/security
+    artifact: ${{ parameters.artifactName }}
+    displayName: Publish security reports
+    condition: always()

@@ -1,0 +1,26 @@
+# Prepares a job for security scans: Python venv for the policy scripts, a shared Trivy cache,
+# optional registry login, and the run-summary table. Expects `checkout: self` at path `self`.
+parameters:
+  - name: registryConnection   # Docker registry / ACR service connection for private images ('' = none)
+    type: string
+    default: ''
+
+steps:
+  - script: |
+      set -euo pipefail
+      python3 -m venv "$(Agent.TempDirectory)/secvenv"
+      "$(Agent.TempDirectory)/secvenv/bin/pip" install --quiet pyyaml==6.0.2
+      mkdir -p "$(Agent.TempDirectory)/trivy-cache" "$(Build.ArtifactStagingDirectory)/security" "$HOME/.docker"
+      [ -f "$HOME/.docker/config.json" ] || echo '{}' > "$HOME/.docker/config.json"
+      {
+        echo "| target | artifact | CRITICAL | HIGH | MEDIUM | LOW | excepted | verdict |"
+        echo "|---|---|---|---|---|---|---|---|"
+      } > "$(Agent.TempDirectory)/security-summary.md"
+    displayName: Prepare security scanning
+
+  - ${{ if ne(parameters.registryConnection, '') }}:
+      - task: Docker@2
+        displayName: Log in to the registry
+        inputs:
+          command: login
+          containerRegistry: ${{ parameters.registryConnection }}

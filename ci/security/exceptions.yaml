@@ -1,0 +1,16 @@
+# Reviewed, time-bounded security exceptions.
+#
+# Every entry is narrow (one finding id, explicit scope), owned, approved, justified and expiring.
+# render_exceptions.py validates this file and turns the entries for one scan target into a
+# Trivy ignore file; expired entries stop suppressing their finding, which then blocks again.
+#
+#   - id: CVE-2021-12345              # CVE / GHSA id, or Trivy misconfiguration id (AVD-...)
+#     kind: vulnerability             # vulnerability | misconfiguration
+#     scope: [carts]                  # scan targets: image/service names, "iac", or "*" for all
+#     owner: Javel Rowe               # accountable for remediation
+#     approver: Javel Rowe            # who accepted the risk
+#     rationale: why the risk is accepted and how it will be remediated
+#     created: 2026-10-15
+#     expires: 2027-01-13             # at most policy.yaml exceptions.max_days after created
+
+exceptions: []

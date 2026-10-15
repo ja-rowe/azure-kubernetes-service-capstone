@@ -1,0 +1,253 @@
+# Standalone security scan (manual). Scans the latest build of every image in ACR, the
+# dependencies of every service repository, and this repository's infrastructure code, and applies
+# the policy in ci/security/policy.md. Not part of the release path yet.
+#
+# The parameters are the policy switches, e.g. to demonstrate that the gate blocks:
+#   useExceptions=false            -> the legacy backlog blocks again
+#   blockSeverities=CRITICAL,HIGH  -> HIGH findings block instead of warning
+trigger: none
+pr: none
+
+parameters:
+  - name: blockSeverities
+    displayName: Severities that block
+    type: string
+    default: CRITICAL
+    values:
+      - CRITICAL
+      - CRITICAL,HIGH
+  - name: warnSeverities
+    displayName: Severities reported as warnings
+    type: string
+    default: HIGH
+    values:
+      - HIGH
+      - HIGH,MEDIUM
+  - name: useExceptions
+    displayName: Honour reviewed exceptions
+    type: boolean
+    default: true
+  - name: imageTag
+    displayName: Image tag to scan
+    type: string
+    default: latest
+
+pool:
+  vmImage: ubuntu-24.04
+
+resources:
+  repositories:
+    - repository: carts
+      type: git
+      name: carts
+      ref: main
+    - repository: orders
+      type: git
+      name: orders
+      ref: main
+    - repository: shipping
+      type: git
+      name: shipping
+      ref: main
+    - repository: queue_master
+      type: git
+      name: queue-master
+      ref: main
+    - repository: user
+      type: git
+      name: user
+      ref: main
+    - repository: payment
+      type: git
+      name: payment
+      ref: main
+    - repository: catalogue
+      type: git
+      name: catalogue
+      ref: main
+    - repository: front_end
+      type: git
+      name: front-end
+      ref: main
+
+jobs:
+  - job: images
+    displayName: Container images
+    steps:
+      - checkout: self
+        path: self
+      - template: templates/scan-setup.yml
+        parameters:
+          registryConnection: acr-sockshop1
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:carts
+          image: sockshop1.azurecr.io/carts:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:catalogue
+          image: sockshop1.azurecr.io/catalogue:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:catalogue-db
+          image: sockshop1.azurecr.io/catalogue-db:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:orders
+          image: sockshop1.azurecr.io/orders:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:payment
+          image: sockshop1.azurecr.io/payment:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:queuemaster
+          image: sockshop1.azurecr.io/queuemaster:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:shipping
+          image: sockshop1.azurecr.io/shipping:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:user
+          image: sockshop1.azurecr.io/user:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:user-db
+          image: sockshop1.azurecr.io/user-db:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-image.yml
+        parameters:
+          scope: image:frontend
+          image: sockshop1.azurecr.io/frontend:${{ parameters.imageTag }}
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-publish.yml
+        parameters:
+          artifactName: security-images
+
+  - job: packages
+    displayName: Service dependencies
+    steps:
+      - checkout: self
+        path: self
+      - checkout: carts
+        path: svc/carts
+      - checkout: orders
+        path: svc/orders
+      - checkout: shipping
+        path: svc/shipping
+      - checkout: queue_master
+        path: svc/queue-master
+      - checkout: user
+        path: svc/user
+      - checkout: payment
+        path: svc/payment
+      - checkout: catalogue
+        path: svc/catalogue
+      - checkout: front_end
+        path: svc/front-end
+      - template: templates/scan-setup.yml
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:carts
+          path: $(Pipeline.Workspace)/svc/carts
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:orders
+          path: $(Pipeline.Workspace)/svc/orders
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:shipping
+          path: $(Pipeline.Workspace)/svc/shipping
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:queue-master
+          path: $(Pipeline.Workspace)/svc/queue-master
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:user
+          path: $(Pipeline.Workspace)/svc/user
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:payment
+          path: $(Pipeline.Workspace)/svc/payment
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:catalogue
+          path: $(Pipeline.Workspace)/svc/catalogue
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-fs.yml
+        parameters:
+          scope: pkg:front-end
+          path: $(Pipeline.Workspace)/svc/front-end
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-publish.yml
+        parameters:
+          artifactName: security-packages
+
+  - job: iac
+    displayName: Infrastructure as code
+    steps:
+      - checkout: self
+        path: self
+      - template: templates/scan-setup.yml
+      - template: templates/scan-iac.yml
+        parameters:
+          scope: iac
+          path: $(Pipeline.Workspace)/self
+          blockSeverities: ${{ parameters.blockSeverities }}
+          warnSeverities: ${{ parameters.warnSeverities }}
+          useExceptions: ${{ parameters.useExceptions }}
+      - template: templates/scan-publish.yml
+        parameters:
+          artifactName: security-iac
