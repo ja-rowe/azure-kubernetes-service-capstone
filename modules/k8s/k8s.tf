@@ -5,7 +5,8 @@ provider "kubernetes" {
   cluster_ca_certificate = var.cluster_ca_certificate
 }
 
-resource "kubernetes_namespace" "sock_shop" {
+# The namespace is created and access-controlled by the platform/ root; deployments only use it.
+data "kubernetes_namespace" "sock_shop" {
   metadata {
     name = var.namespace
   }

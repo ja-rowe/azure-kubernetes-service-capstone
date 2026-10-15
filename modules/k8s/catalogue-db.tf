@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "catalogue_db" {
   metadata {
     name      = "catalogue-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "catalogue-db"
     }
@@ -55,7 +55,7 @@ resource "kubernetes_deployment" "catalogue_db" {
 resource "kubernetes_service" "catalogue_db" {
   metadata {
     name      = "catalogue-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "catalogue-db"
     }

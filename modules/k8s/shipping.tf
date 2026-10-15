@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "shipping" {
   metadata {
     name      = "shipping"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "shipping"
     }
@@ -91,7 +91,7 @@ resource "kubernetes_deployment" "shipping" {
 resource "kubernetes_service" "shipping" {
   metadata {
     name      = "shipping"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "shipping"
     }

@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "rabbitmq" {
   metadata {
     name      = "rabbitmq"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "rabbitmq"
     }
@@ -71,7 +71,7 @@ resource "kubernetes_deployment" "rabbitmq" {
 resource "kubernetes_service" "rabbitmq" {
   metadata {
     name      = "rabbitmq"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "rabbitmq"
     }

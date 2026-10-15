@@ -17,7 +17,7 @@ terraform {
     }
   }
 
-  required_version = ">= 1.1.0"
+  required_version = ">= 1.7.0"
 
   backend "azurerm" {}
 }
@@ -55,4 +55,13 @@ module "k8s" {
   USER_IMG         = var.images["user"]
   USER_DB_IMG      = var.images["user-db"]
   FRONTEND_IMG     = var.images["front-end"]
+}
+
+# The namespace moved to the platform/ root. Forget it here without deleting it.
+removed {
+  from = module.k8s.kubernetes_namespace.sock_shop
+
+  lifecycle {
+    destroy = false
+  }
 }

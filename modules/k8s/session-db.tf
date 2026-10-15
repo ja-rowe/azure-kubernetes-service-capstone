@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "session_db" {
   metadata {
     name      = "session-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "session-db"
     }
@@ -57,7 +57,7 @@ resource "kubernetes_deployment" "session_db" {
 resource "kubernetes_service" "session_db" {
   metadata {
     name      = "session-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "session-db"
     }

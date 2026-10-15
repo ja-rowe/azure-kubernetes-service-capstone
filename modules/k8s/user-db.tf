@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "user_db" {
   metadata {
     name      = "user-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "user-db"
     }
@@ -67,7 +67,7 @@ resource "kubernetes_deployment" "user_db" {
 resource "kubernetes_service" "user_db" {
   metadata {
     name      = "user-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "user-db"
     }

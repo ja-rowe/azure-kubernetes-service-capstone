@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "front_end" {
   metadata {
     name      = "front-end"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
   }
 
   spec {
@@ -89,7 +89,7 @@ resource "kubernetes_deployment" "front_end" {
 resource "kubernetes_service" "front_end" {
   metadata {
     name      = "front-end"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "front-end"
     }

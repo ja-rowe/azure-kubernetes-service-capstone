@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "carts_db" {
   metadata {
     name      = "carts-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "carts-db"
     }
@@ -67,7 +67,7 @@ resource "kubernetes_deployment" "carts_db" {
 resource "kubernetes_service" "carts_db" {
   metadata {
     name      = "carts-db"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "carts-db"
     }

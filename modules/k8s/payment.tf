@@ -1,7 +1,7 @@
 resource "kubernetes_deployment" "payment" {
   metadata {
     name      = "payment"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "payment"
     }
@@ -88,7 +88,7 @@ resource "kubernetes_deployment" "payment" {
 resource "kubernetes_service" "payment" {
   metadata {
     name      = "payment"
-    namespace = kubernetes_namespace.sock_shop.metadata.0.name
+    namespace = data.kubernetes_namespace.sock_shop.metadata.0.name
     labels = {
       name = "payment"
     }
