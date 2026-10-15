@@ -1,5 +1,8 @@
 # Signs in to Azure with the service principal from the `.env` secure file and exposes the
 # state storage key to later steps. Variables: stateRg, stateAccount.
+#
+# Infrastructure pipeline only (azure-pipelines.yml). Delivery pipelines sign in through the
+# environment service connections (sockshop-<env>) and never use `.env`.
 steps:
   - task: DownloadSecureFile@1
     name: envFile

@@ -65,8 +65,6 @@ variables:
     value: t3-capstone-tfstate-rg
   - name: stateAccount
     value: t3capstonetfstate
-  - name: stateContainer
-    value: tfstate
 
 stages:
   - stage: Resolve
@@ -74,7 +72,6 @@ stages:
       - job: resolveJob
         steps:
           - checkout: none
-          - template: templates/azure-login.yml
           - template: templates/resolve-images.yml
 
   - stage: Dev
@@ -91,7 +88,6 @@ stages:
             deploy:
               steps:
                 - checkout: self
-                - template: templates/azure-login.yml
                 - template: templates/deploy-env.yml
                   parameters:
                     environment: dev

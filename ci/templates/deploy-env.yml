@@ -1,5 +1,11 @@
 # Deploys the Sock Shop into one environment (namespace on the shared cluster) with the image set
 # in the `images` environment variable (JSON map), then smoke-tests it.
+#
+# Every step that touches Azure signs in through the environment's own service connection
+# (sockshop-<environment> -> managed identity id-sockshop-<environment>, workload identity
+# federation, no stored secret). That identity can only write its own Terraform state container
+# (env-<environment>) and its own namespace; using the connection is also what makes Azure DevOps
+# evaluate the connection's checks before this stage starts.
 parameters:
   - name: environment
     type: string
@@ -10,57 +16,85 @@ steps:
     inputs:
       terraformVersion: latest
 
-  - script: |
-      set -euo pipefail
-      cd envs
-      terraform init -input=false \
-        -backend-config="resource_group_name=$(stateRg)" \
-        -backend-config="storage_account_name=$(stateAccount)" \
-        -backend-config="container_name=$(stateContainer)" \
-        -backend-config="key=env-${{ parameters.environment }}.tfstate"
+  - task: KubeloginInstaller@0
+    displayName: Install kubelogin
+    inputs:
+      kubeloginVersion: latest
 
-      jq -n --argjson images "$IMAGES" '{images: $images}' > images.auto.tfvars.json
-      terraform apply -input=false -auto-approve -var "environment=${{ parameters.environment }}"
+  - task: AzureCLI@2
     displayName: Deploy ${{ parameters.environment }} (terraform apply)
+    inputs:
+      azureSubscription: sockshop-${{ parameters.environment }}
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -euo pipefail
+        echo "Signed in as $(az account show --query user.name -o tsv) (sockshop-${{ parameters.environment }})"
+
+        # The identity's own Entra login for kubectl and Terraform (no cluster admin credentials).
+        export KUBECONFIG="$(Agent.TempDirectory)/kubeconfig"
+        az aks get-credentials --resource-group aks-terraform --name aks-terraform \
+          --file "$KUBECONFIG" --overwrite-existing --output none
+        kubelogin convert-kubeconfig -l azurecli
+
+        # State with Entra auth (the identity's role on its container), no storage account key.
+        export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+        cd envs
+        terraform init -input=false \
+          -backend-config="resource_group_name=$(stateRg)" \
+          -backend-config="storage_account_name=$(stateAccount)" \
+          -backend-config="container_name=env-${{ parameters.environment }}" \
+          -backend-config="key=env-${{ parameters.environment }}.tfstate" \
+          -backend-config="use_azuread_auth=true"
+
+        jq -n --argjson images "$IMAGES" '{images: $images}' > images.auto.tfvars.json
+        terraform apply -input=false -auto-approve \
+          -var "environment=${{ parameters.environment }}" \
+          -var "kubeconfig=$KUBECONFIG"
     env:
       IMAGES: $(images)
-      ARM_ACCESS_KEY: $(ARM_ACCESS_KEY)
-      ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
 
-  - script: |
-      set -euo pipefail
-      NS="sock-shop-${{ parameters.environment }}"
-      # --admin: the cluster uses Entra ID; temporary until deploys use the environment identity
-      az aks get-credentials --resource-group aks-terraform --name aks-terraform --admin --overwrite-existing >/dev/null
-
-      echo "Waiting for the front-end load balancer address..."
-      IP=""
-      for i in $(seq 1 60); do
-        IP=$(kubectl get svc front-end -n "$NS" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
-        [ -n "$IP" ] && break
-        sleep 10
-      done
-      if [ -z "$IP" ]; then
-        kubectl get pods -n "$NS" -o wide || true
-        echo "##vso[task.logissue type=error]No external IP for front-end in $NS"
-        exit 1
-      fi
-
-      echo "Waiting for the shop to answer on http://$IP ..."
-      ok=""
-      for i in $(seq 1 60); do
-        code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://$IP/" || true)
-        cat=$(curl -s -m 10 "http://$IP/catalogue?size=1" || true)
-        if [ "$code" = "200" ] && echo "$cat" | jq -e 'length > 0' >/dev/null 2>&1; then ok=yes; break; fi
-        sleep 10
-      done
-      if [ -z "$ok" ]; then
-        kubectl get pods -n "$NS" -o wide || true
-        kubectl describe pods -n "$NS" 2>/dev/null | grep -E "Image|Failed|BackOff|Error" | head -30 || true
-        echo "##vso[task.logissue type=error]Smoke test failed for $NS (http://$IP)"
-        exit 1
-      fi
-
-      echo "Smoke test passed. ${{ parameters.environment }}: http://$IP"
-      echo "##vso[task.setvariable variable=environmentUrl]http://$IP"
+  - task: AzureCLI@2
     displayName: Smoke test ${{ parameters.environment }}
+    inputs:
+      azureSubscription: sockshop-${{ parameters.environment }}
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -euo pipefail
+        NS="sock-shop-${{ parameters.environment }}"
+        export KUBECONFIG="$(Agent.TempDirectory)/kubeconfig"
+        az aks get-credentials --resource-group aks-terraform --name aks-terraform \
+          --file "$KUBECONFIG" --overwrite-existing --output none
+        kubelogin convert-kubeconfig -l azurecli
+
+        echo "Waiting for the front-end load balancer address..."
+        IP=""
+        for i in $(seq 1 60); do
+          IP=$(kubectl get svc front-end -n "$NS" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+          [ -n "$IP" ] && break
+          sleep 10
+        done
+        if [ -z "$IP" ]; then
+          kubectl get pods -n "$NS" -o wide || true
+          echo "##vso[task.logissue type=error]No external IP for front-end in $NS"
+          exit 1
+        fi
+
+        echo "Waiting for the shop to answer on http://$IP ..."
+        ok=""
+        for i in $(seq 1 60); do
+          code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://$IP/" || true)
+          cat=$(curl -s -m 10 "http://$IP/catalogue?size=1" || true)
+          if [ "$code" = "200" ] && echo "$cat" | jq -e 'length > 0' >/dev/null 2>&1; then ok=yes; break; fi
+          sleep 10
+        done
+        if [ -z "$ok" ]; then
+          kubectl get pods -n "$NS" -o wide || true
+          kubectl describe pods -n "$NS" 2>/dev/null | grep -E "Image|Failed|BackOff|Error" | head -30 || true
+          echo "##vso[task.logissue type=error]Smoke test failed for $NS (http://$IP)"
+          exit 1
+        fi
+
+        echo "Smoke test passed. ${{ parameters.environment }}: http://$IP"
+        echo "##vso[task.setvariable variable=environmentUrl]http://$IP"

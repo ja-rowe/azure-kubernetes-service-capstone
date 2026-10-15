@@ -4,6 +4,10 @@
 # and `prod` carry a Branch control check (refs/heads/main only) and an Approval check, both
 # evaluated by Azure DevOps before the Deploy stage starts. The image set is captured in the
 # Resolve stage (see its run summary) and that exact set is what gets deployed after approval.
+#
+# Credentials: Resolve reads the source environment with that environment's own connection; the
+# target's connection (sockshop-staging / sockshop-prod, Branch control: main only) is used only
+# in the Deploy stage, so it is issued after the target environment's approval.
 trigger: none
 pr: none
 
@@ -24,8 +28,6 @@ variables:
     value: t3-capstone-tfstate-rg
   - name: stateAccount
     value: t3capstonetfstate
-  - name: stateContainer
-    value: tfstate
   # The environment each target is promoted from.
   - ${{ if eq(parameters.environment, 'staging') }}:
       - name: sourceEnvironment
@@ -41,10 +43,9 @@ stages:
       - job: resolveJob
         steps:
           - checkout: self
-          - template: templates/azure-login.yml
           - template: templates/read-env-images.yml
             parameters:
-              sourceEnvironment: $(sourceEnvironment)
+              sourceEnvironment: ${{ variables.sourceEnvironment }}
 
   - stage: Deploy
     displayName: Deploy to ${{ parameters.environment }}
@@ -61,7 +62,6 @@ stages:
             deploy:
               steps:
                 - checkout: self
-                - template: templates/azure-login.yml
                 - template: templates/deploy-env.yml
                   parameters:
                     environment: ${{ parameters.environment }}
