@@ -1,0 +1,2 @@
+# staging: Production-like: two replicas of each stateless service.
+replicas: 2

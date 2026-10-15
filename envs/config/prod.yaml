@@ -1,0 +1,2 @@
+# prod: Two replicas of each stateless service.
+replicas: 2

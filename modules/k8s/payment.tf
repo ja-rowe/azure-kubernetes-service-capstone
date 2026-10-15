@@ -8,7 +8,20 @@ resource "kubernetes_deployment" "payment" {
   }
 
   spec {
-    replicas = 1
+    replicas = var.replicas
+
+    # A rollout that does not become ready within 5 minutes is reported as failed by Kubernetes;
+    # the old pods keep serving until new ones are ready.
+    progress_deadline_seconds = 300
+
+    strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_surge       = 1
+        max_unavailable = 0
+      }
+    }
 
     selector {
       match_labels = {

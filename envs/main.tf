@@ -36,10 +36,36 @@ data "azurerm_kubernetes_cluster" "cluster" {
   resource_group_name = var.cluster_resource_group
 }
 
+# Environment-specific settings (replicas, ...) live in config/<environment>.yaml.
+locals {
+  config = yamldecode(file("${path.module}/config/${var.environment}.yaml"))
+}
+
+# Outputs of the infrastructure root (Key Vault names, tenant).
+data "terraform_remote_state" "infra" {
+  backend = "azurerm"
+  config = {
+    resource_group_name  = var.state_resource_group
+    storage_account_name = var.state_storage_account
+    container_name       = var.state_container
+    key                  = "aks.terraform.tfstate"
+  }
+}
+
+data "azurerm_user_assigned_identity" "environment" {
+  name                = "id-sockshop-${var.environment}"
+  resource_group_name = var.cluster_resource_group
+}
+
 module "k8s" {
   source = "../modules/k8s"
 
-  namespace              = "sock-shop-${var.environment}"
+  namespace                   = "sock-shop-${var.environment}"
+  replicas                    = local.config.replicas
+  key_vault_name              = data.terraform_remote_state.infra.outputs.key_vaults[var.environment].name
+  tenant_id                   = data.terraform_remote_state.infra.outputs.tenant_id
+  workload_identity_client_id = data.azurerm_user_assigned_identity.environment.client_id
+
   host                   = data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.host
   client_certificate     = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.client_certificate)
   client_key             = base64decode(data.azurerm_kubernetes_cluster.cluster.kube_admin_config.0.client_key)

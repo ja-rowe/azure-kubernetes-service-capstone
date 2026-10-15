@@ -14,3 +14,8 @@ output "images" {
 output "front_end_ip" {
   value = module.k8s.front_end_ip
 }
+
+output "replicas" {
+  value = local.config.replicas
+}
+

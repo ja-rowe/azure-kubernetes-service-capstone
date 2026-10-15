@@ -8,7 +8,20 @@ resource "kubernetes_deployment" "carts" {
   }
 
   spec {
-    replicas = 1
+    replicas = var.replicas
+
+    # A rollout that does not become ready within 5 minutes is reported as failed by Kubernetes;
+    # the old pods keep serving until new ones are ready.
+    progress_deadline_seconds = 300
+
+    strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_surge       = 1
+        max_unavailable = 0
+      }
+    }
 
     selector {
       match_labels = {
@@ -47,6 +60,17 @@ resource "kubernetes_deployment" "carts" {
 
           port {
             container_port = 80
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 80
+            }
+
+            initial_delay_seconds = 60
+            period_seconds        = 10
+            failure_threshold     = 12
           }
 
           security_context {

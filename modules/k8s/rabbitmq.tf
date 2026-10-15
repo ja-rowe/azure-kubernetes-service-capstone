@@ -10,6 +10,11 @@ resource "kubernetes_deployment" "rabbitmq" {
   spec {
     replicas = 1
 
+    # Single-instance state without a shared volume: never run two copies at once.
+    strategy {
+      type = "Recreate"
+    }
+
     selector {
       match_labels = {
         name = "rabbitmq"

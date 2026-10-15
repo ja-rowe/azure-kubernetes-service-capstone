@@ -1,0 +1,2 @@
+# dev: Fast and cheap: one replica of each service.
+replicas: 1

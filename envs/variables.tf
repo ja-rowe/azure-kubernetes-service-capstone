@@ -31,3 +31,16 @@ variable "images" {
     error_message = "images must contain carts, catalogue, catalogue-db, orders, payment, queue-master, shipping, user, user-db and front-end."
   }
 }
+
+variable "state_resource_group" {
+  default = "t3-capstone-tfstate-rg"
+}
+
+variable "state_storage_account" {
+  default = "t3capstonetfstate"
+}
+
+variable "state_container" {
+  default = "tfstate"
+}
+
