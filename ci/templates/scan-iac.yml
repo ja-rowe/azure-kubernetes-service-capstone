@@ -46,7 +46,7 @@ steps:
         exit 1
       }
 
-      trivy config --quiet --format json --output "/out/$NAME.json" --show-suppressed \
+      trivy config --quiet --format json --output "/out/$NAME.json" \
         --ignorefile /out/trivyignore.yaml --tf-exclude-downloaded-modules /src || scanner_error "IaC scan" $?
       trivy config --quiet --format sarif --output "/out/$NAME.sarif" \
         --ignorefile /out/trivyignore.yaml --tf-exclude-downloaded-modules /src || scanner_error "SARIF report" $?
