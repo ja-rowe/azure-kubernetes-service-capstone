@@ -186,3 +186,22 @@ resource "azuredevops_build_definition" "infra" {
 
   depends_on = [azuredevops_pipeline_authorization.github]
 }
+
+# Each service repository may be read only by its own test and build pipelines. Without this,
+# a pipeline-triggered run waits for a manual "Permit" (or never starts), which is what kept
+# shipping-build and payment-build from running.
+data "azuredevops_git_repository" "service" {
+  for_each   = toset(local.services)
+  project_id = data.azuredevops_project.project.id
+  name       = each.key
+}
+
+resource "azuredevops_pipeline_authorization" "service_repository" {
+  for_each = {
+    for pair in setproduct(local.services, ["test", "build"]) : "${pair[0]}-${pair[1]}" => pair[0]
+  }
+  project_id  = data.azuredevops_project.project.id
+  resource_id = data.azuredevops_git_repository.service[each.value].id
+  type        = "repository"
+  pipeline_id = azuredevops_build_definition.pipeline[each.key].id
+}
