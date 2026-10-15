@@ -73,3 +73,36 @@ resource "azurerm_role_assignment" "operator_cluster_admin" {
   role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
   principal_id         = data.azurerm_client_config.current.object_id
 }
+
+# ------------------------------------------------------- environment state
+
+data "azurerm_storage_account" "state" {
+  name                = var.state_storage_account
+  resource_group_name = var.state_resource_group
+}
+
+# One state container per environment, so access can be granted per environment: Azure storage
+# data roles can be scoped to a container but not to a single blob.
+resource "azurerm_storage_container" "environment_state" {
+  for_each              = toset(local.environments)
+  name                  = "env-${each.key}"
+  storage_account_id    = data.azurerm_storage_account.state.id
+  container_access_type = "private"
+}
+
+# Each environment's deployments read and write their own state only, signed in with Entra ID
+# (no storage account key, which would open every state including the infrastructure's).
+resource "azurerm_role_assignment" "environment_state" {
+  for_each             = azurerm_storage_container.environment_state
+  scope                = each.value.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = data.azurerm_user_assigned_identity.environment[each.key].principal_id
+}
+
+# release-dev resolves the newest image of every service from the registry (tags and digests)
+# while signed in as the dev identity.
+resource "azurerm_role_assignment" "dev_registry_reader" {
+  scope                = data.azurerm_container_registry.acr.id
+  role_definition_name = "Reader"
+  principal_id         = data.azurerm_user_assigned_identity.environment["dev"].principal_id
+}
