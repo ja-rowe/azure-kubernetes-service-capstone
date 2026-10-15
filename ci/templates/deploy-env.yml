@@ -30,7 +30,8 @@ steps:
   - script: |
       set -euo pipefail
       NS="sock-shop-${{ parameters.environment }}"
-      az aks get-credentials --resource-group aks-terraform --name aks-terraform --overwrite-existing >/dev/null
+      # --admin: the cluster uses Entra ID; temporary until deploys use the environment identity
+      az aks get-credentials --resource-group aks-terraform --name aks-terraform --admin --overwrite-existing >/dev/null
 
       echo "Waiting for the front-end load balancer address..."
       IP=""
