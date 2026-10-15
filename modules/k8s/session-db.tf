@@ -49,6 +49,22 @@ resource "kubernetes_deployment" "session_db" {
 
             read_only_root_filesystem = true
           }
+
+          # Redis writes its snapshots to /data. Without a writable directory the first snapshot
+          # fails and Redis then refuses every write (stop-writes-on-bgsave-error), which loses
+          # sessions and logins.
+          volume_mount {
+            mount_path = "/data"
+            name       = "data-volume"
+          }
+        }
+
+        volume {
+          name = "data-volume"
+
+          empty_dir {
+            medium = "Memory"
+          }
         }
 
         node_selector = {
