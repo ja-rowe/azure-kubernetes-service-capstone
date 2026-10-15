@@ -37,7 +37,7 @@ steps:
         docker run --rm \
           -v "$(Agent.TempDirectory)/trivy-cache:/root/.cache/trivy" \
           -v "$OUT:/out" \
-          -v "$HOME/.docker/config.json:/root/.docker/config.json:ro" \
+          -v "${DOCKER_CONFIG:-$HOME/.docker}/config.json:/root/.docker/config.json:ro" \
           -v "${{ parameters.path }}:/src:ro" \
           ${{ parameters.scannerImage }} "$@"
       }

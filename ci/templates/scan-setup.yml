@@ -11,6 +11,7 @@ steps:
       python3 -m venv "$(Agent.TempDirectory)/secvenv"
       "$(Agent.TempDirectory)/secvenv/bin/pip" install --quiet pyyaml==6.0.2
       mkdir -p "$(Agent.TempDirectory)/trivy-cache" "$(Build.ArtifactStagingDirectory)/security" "$HOME/.docker"
+      # Docker@2 login writes to $DOCKER_CONFIG; without a login the scans mount this empty config.
       [ -f "$HOME/.docker/config.json" ] || echo '{}' > "$HOME/.docker/config.json"
       {
         echo "| target | artifact | CRITICAL | HIGH | MEDIUM | LOW | excepted | verdict |"
