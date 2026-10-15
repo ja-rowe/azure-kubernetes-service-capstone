@@ -1,24 +1,37 @@
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_kubernetes_cluster" "aks-terraform" {
-  name = "aks-terraform"
-  location = "centralus"
+  name                = "aks-terraform"
+  location            = "centralus"
   resource_group_name = "aks-terraform"
-  dns_prefix = "aks-terraform"
+  dns_prefix          = "aks-terraform"
 
   default_node_pool {
-    name = "default"
+    name       = "default"
     node_count = 4
-    vm_size = "Standard_B2s"
+    vm_size    = "Standard_B2s"
   }
   node_provisioning_profile {
-    mode = "Manual"
+    mode               = "Manual"
     default_node_pools = "None"
   }
-  service_principal {
-    client_id = var.client_id
-    client_secret = var.client_secret
+  # Managed identity instead of a service principal: no client secret to store or rotate.
+  # AKS also creates a kubelet identity in the node resource group, used for image pulls.
+  identity {
+    type = "SystemAssigned"
   }
+
+  # Entra ID authentication with Azure RBAC for Kubernetes authorization, so access can be
+  # granted per namespace with Azure role assignments. Local accounts stay enabled until the
+  # environment deployments authenticate with Entra identities.
+  azure_active_directory_role_based_access_control {
+    azure_rbac_enabled = true
+    tenant_id          = data.azurerm_client_config.current.tenant_id
+  }
+  local_account_disabled = false
+
   network_profile {
-    network_plugin = "kubenet"
+    network_plugin    = "kubenet"
     load_balancer_sku = "standard"
   }
   oms_agent {
@@ -28,8 +41,8 @@ resource "azurerm_kubernetes_cluster" "aks-terraform" {
 
 resource "azurerm_log_analytics_workspace" "logws" {
   resource_group_name = "aks-terraform"
-  location = "centralus"
-  name = "aks-terraform-log-w"
+  location            = "centralus"
+  name                = "aks-terraform-log-w"
 }
 
 resource "azurerm_log_analytics_solution" "logsoln" {

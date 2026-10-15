@@ -17,10 +17,6 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 5.8.0"
     }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 3.10.0"
-    }
   }
 
   required_version = ">= 1.5.0"
@@ -32,7 +28,12 @@ provider "azurerm" {
   features {}
 }
 
-provider "azuread" {}
+locals {
+  environments = ["dev", "staging", "prod"]
+}
+
+# The account applying this root (the operator).
+data "azurerm_client_config" "current" {}
 
 data "azurerm_kubernetes_cluster" "cluster" {
   name                = var.cluster_name
@@ -44,19 +45,31 @@ data "azurerm_container_registry" "acr" {
   resource_group_name = var.acr_resource_group
 }
 
-# The cluster runs with a service principal; its kubelet pulls images with that identity.
-data "azuread_service_principal" "cluster" {
-  client_id = data.azurerm_kubernetes_cluster.cluster.service_principal[0].client_id
+data "azurerm_user_assigned_identity" "environment" {
+  for_each            = toset(local.environments)
+  name                = "id-sockshop-${each.key}"
+  resource_group_name = var.cluster_resource_group
 }
 
-resource "azurerm_role_assignment" "cluster_acr_pull" {
+# Image pulls: the cluster runs with a managed identity, and its kubelet identity pulls images.
+resource "azurerm_role_assignment" "kubelet_acr_pull" {
   scope                = data.azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
-  principal_id         = data.azuread_service_principal.cluster.object_id
+  principal_id         = data.azurerm_kubernetes_cluster.cluster.kubelet_identity[0].object_id
 }
 
-# The grant was first made by hand; adopt it instead of creating a duplicate.
-import {
-  to = azurerm_role_assignment.cluster_acr_pull
-  id = "/subscriptions/ce33f549-c7bf-44f7-b22b-7036ae957695/resourceGroups/aks-terraform/providers/Microsoft.ContainerRegistry/registries/sockshop1/providers/Microsoft.Authorization/roleAssignments/912529fa-df6c-4b5f-9b98-79ea71c64da4"
+# Each environment identity may fetch the (Entra) cluster credentials. What it may do inside the
+# cluster is granted per namespace separately (Azure RBAC for Kubernetes).
+resource "azurerm_role_assignment" "environment_cluster_user" {
+  for_each             = data.azurerm_user_assigned_identity.environment
+  scope                = data.azurerm_kubernetes_cluster.cluster.id
+  role_definition_name = "Azure Kubernetes Service Cluster User Role"
+  principal_id         = each.value.principal_id
+}
+
+# The operator administers the cluster through Entra ID (kubectl with Azure RBAC).
+resource "azurerm_role_assignment" "operator_cluster_admin" {
+  scope                = data.azurerm_kubernetes_cluster.cluster.id
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = data.azurerm_client_config.current.object_id
 }

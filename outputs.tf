@@ -34,3 +34,17 @@ output "log_analytics_workspace_id" {
 output "monitoring_url" {
   value = "https://portal.azure.com/#@/resource${module.cluster.id}/insights"
 }
+
+output "kubelet_identity_object_id" {
+  value = module.cluster.kubelet_identity_object_id
+}
+
+output "environment_identities" {
+  value = {
+    for env, id in azurerm_user_assigned_identity.environment : env => {
+      id           = id.id
+      client_id    = id.client_id
+      principal_id = id.principal_id
+    }
+  }
+}

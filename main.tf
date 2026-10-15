@@ -17,7 +17,5 @@ provider "azurerm" {
 }
 
 module "cluster" {
-  source        = "./modules/cluster"
-  client_id     = var.CLIENT_ID
-  client_secret = var.CLIENT_SECRET
+  source = "./modules/cluster"
 }
