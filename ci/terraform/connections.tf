@@ -6,9 +6,12 @@
 locals {
   connection_environments = ["dev", "staging", "prod"]
 
-  # Which delivery pipelines may use each environment's connection.
+  # Which delivery pipelines may use each environment's connection. promote reads the image set
+  # of its source environment with that environment's connection (dev when promoting to staging,
+  # staging when promoting to prod), so the target's credentials are only issued to the Deploy
+  # stage, after the target environment's approval.
   connection_pipelines = {
-    dev     = ["release-dev"]
+    dev     = ["release-dev", "promote"]
     staging = ["promote"]
     prod    = ["promote"]
   }
