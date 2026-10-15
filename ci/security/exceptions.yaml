@@ -13,4 +13,592 @@
 #     created: 2026-10-15
 #     expires: 2027-01-13             # at most policy.yaml exceptions.max_days after created
 
-exceptions: []
+exceptions:
+  # Infrastructure findings in this repository's own Terraform (reviewed individually).
+  - id: AZU-0041
+    kind: misconfiguration
+    scope: [iac]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: AKS API server has no authorized IP ranges because the pipelines run on Microsoft-hosted agents without fixed IPs; access is Entra ID + Azure RBAC with namespace-scoped roles. Revisit with self-hosted agents or a private cluster
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: AZU-0013
+    kind: misconfiguration
+    scope: [iac]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Key Vault firewall left open (no default Deny) because the hosted infra pipeline must reach the vaults from changing IPs; access is limited by per-vault access policies (only the environment identity reads, only the infra pipeline writes). Revisit with private endpoints or self-hosted agents
+    created: 2026-10-15
+    expires: 2027-01-13
+
+  # Legacy 2017-era Sock Shop backlog (baseline scan, run 289): CRITICAL vulnerabilities with a fix.
+  - id: CVE-2016-1000027
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-10989
+    kind: vulnerability
+    scope: [image:carts]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-15095
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-16042
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-17485
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-5648
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-5651
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-5929
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-7525
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-8045
+    kind: vulnerability
+    scope: [image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2017-8046
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-11307
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-1270
+    kind: vulnerability
+    scope: [image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-1275
+    kind: vulnerability
+    scope: [image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14599
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14600
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14718
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14719
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14720
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-14721
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-19360
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-19361
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-19362
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-2938
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-3183
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-7489
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2018-8014
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-14379
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-14540
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-16335
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-16942
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-16943
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-17267
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-17531
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-20330
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-20444
+    kind: vulnerability
+    scope: [image:queuemaster]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2019-5413
+    kind: vulnerability
+    scope: [image:frontend, pkg:front-end]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2020-1938
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2020-7610
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2020-8840
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2020-9547
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2020-9548
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-23369
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-23383
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-36159
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-3711
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-3918
+    kind: vulnerability
+    scope: [image:frontend, pkg:front-end]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2021-44906
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2022-22965
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2022-22980
+    kind: vulnerability
+    scope: [image:carts, image:orders]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2022-23806
+    kind: vulnerability
+    scope: [image:user-db]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2022-37434
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2023-24538
+    kind: vulnerability
+    scope: [image:catalogue-db, image:user-db]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2023-24540
+    kind: vulnerability
+    scope: [image:catalogue-db, image:user-db]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2024-24790
+    kind: vulnerability
+    scope: [image:catalogue-db, image:user-db]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2025-24813
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2025-68121
+    kind: vulnerability
+    scope: [image:catalogue-db, image:user-db]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2025-7783
+    kind: vulnerability
+    scope: [image:frontend, pkg:front-end]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-106445
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-106446
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-33937
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-41293
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-43512
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-43515
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-47884
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-59873
+    kind: vulnerability
+    scope: [image:frontend]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-65182
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-65905
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-68525
+    kind: vulnerability
+    scope: [image:carts, image:orders, image:queuemaster, image:shipping]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-75595
+    kind: vulnerability
+    scope: [image:queuemaster]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+  - id: CVE-2026-90711
+    kind: vulnerability
+    scope: [image:frontend, pkg:front-end]
+    owner: Javel Rowe
+    approver: Javel Rowe
+    rationale: Legacy 2017-era Sock Shop image/dependency backlog accepted for the capstone; remediation via base image and dependency upgrades, re-review at expiry
+    created: 2026-10-15
+    expires: 2027-01-13
+# 73 finding id(s)
