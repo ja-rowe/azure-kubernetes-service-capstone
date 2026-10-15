@@ -1,4 +1,6 @@
 # Scans a source tree's dependencies (lockfiles/manifests): vulnerability report, SBOM, policy decision.
+# --offline-scan: no remote dependency lookups (Maven Central rate-limits hosted agents), so only
+# versions declared in the manifests are evaluated; the image scan covers fully resolved runtime deps.
 parameters:
   - name: scope              # exception scope and report name, e.g. image:carts, pkg:carts, iac
     type: string
@@ -46,11 +48,11 @@ steps:
         exit 1
       }
 
-      trivy fs --quiet --scanners vuln --format json --output "/out/$NAME.json" --show-suppressed \
+      trivy fs --quiet --offline-scan --scanners vuln --format json --output "/out/$NAME.json" --show-suppressed \
         --ignorefile /out/trivyignore.yaml /src || scanner_error "package scan" $?
-      trivy fs --quiet --skip-db-update --scanners vuln --format sarif --output "/out/$NAME.sarif" \
+      trivy fs --quiet --offline-scan --skip-db-update --scanners vuln --format sarif --output "/out/$NAME.sarif" \
         --ignorefile /out/trivyignore.yaml /src || scanner_error "SARIF report" $?
-      trivy fs --quiet --skip-db-update --format cyclonedx --output "/out/$NAME.cdx.json" /src \
+      trivy fs --quiet --offline-scan --skip-db-update --format cyclonedx --output "/out/$NAME.cdx.json" /src \
         || scanner_error "SBOM" $?
 
       python3 "$SEC/evaluate.py" --report "$OUT/$NAME.json" --name '${{ parameters.scope }}' \

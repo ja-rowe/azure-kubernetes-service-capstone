@@ -8,7 +8,10 @@ so a run can be made stricter or ignore exceptions on purpose (for example to de
 
 - **Trivy**, pinned to `aquasec/trivy:0.75.0` (run as a container, version changed deliberately).
 - Image scan → vulnerability report (JSON + SARIF) and a **CycloneDX SBOM** of the scanned image.
-- Package scan (`trivy fs`) → vulnerabilities in the declared/locked dependencies of a service repo.
+- Package scan (`trivy fs --offline-scan`) → vulnerabilities in the declared/locked dependencies of a
+  service repo. Offline: no remote lookups (Maven Central rate-limits hosted agents and a 429 would
+  otherwise make the scan inconclusive), so transitive Java dependencies are evaluated by the image
+  scan of the built jar, which contains the fully resolved set.
 - IaC scan (`trivy config`) → misconfigurations in Terraform source (or a plan JSON).
 
 ## Decision
